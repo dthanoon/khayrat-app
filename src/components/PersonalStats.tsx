@@ -87,17 +87,17 @@ export function PersonalStats() {
         <View style={styles.bars}>
           <ConsistencyBar
             label="Quran"
-            pct={stats.reading_pct}
+            pct={stats.reading_consistency_pct}
             color={colors.emerald}
           />
           <ConsistencyBar
             label="Fasting"
-            pct={stats.fasting_pct}
+            pct={stats.fasting_consistency_pct}
             color={colors.amber}
           />
           <ConsistencyBar
             label="Qiyam"
-            pct={stats.qiyam_pct}
+            pct={stats.qiyam_consistency_pct}
             color={colors.purple}
           />
         </View>

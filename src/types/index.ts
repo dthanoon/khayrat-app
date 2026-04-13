@@ -21,16 +21,33 @@ export interface DailyLog {
   created_at: string
 }
 
+/** Matches the user_stats VIEW columns exactly */
 export interface UserStats {
-  user_id: string
+  id: string                      // the user's UUID (not user_id)
+  username: string
+  full_name: string | null
+  age: number | null
+  gender: string | null
+  country: string | null
+  city: string | null
+  joined_at: string
+  reading_points: number
+  fasting_points: number
+  qiyam_points: number
   total_points: number
   active_days: number
   days_since_joining: number
   consistency_pct: number
-  reading_pct: number
-  fasting_pct: number
-  qiyam_pct: number
+  reading_consistency_pct: number
+  fasting_consistency_pct: number
+  qiyam_consistency_pct: number
 }
+
+export type LeaderboardSort =
+  | 'consistency_pct'
+  | 'total_points'
+  | 'reading_consistency_pct'
+  | 'fasting_consistency_pct'
 
 export interface LeaderboardEntry {
   user_id: string
@@ -40,13 +57,16 @@ export interface LeaderboardEntry {
   total_points: number
   active_days: number
   consistency_pct: number
-  reading_pct: number
-  fasting_pct: number
-  qiyam_pct: number
+  reading_consistency_pct: number
+  fasting_consistency_pct: number
+  qiyam_consistency_pct: number
   rank?: number
 }
 
-export type LeaderboardSort = 'consistency_pct' | 'total_points' | 'reading_pct' | 'fasting_pct'
+export interface LeaderboardFilters {
+  gender?: 'male' | 'female'
+  country?: string
+}
 
 export interface Arena {
   id: string
@@ -63,7 +83,7 @@ export interface Arena {
   track_fasting: boolean
   track_qiyam: boolean
   created_at: string
-  // joined from arena_members
+  // computed client-side from arena_members
   member_count?: number
   team_a_count?: number
   team_b_count?: number
@@ -137,9 +157,9 @@ export interface GroupArenaLeaderboardEntry {
 export interface PersonalStatsData {
   streak: number
   consistency_pct: number
-  reading_pct: number
-  fasting_pct: number
-  qiyam_pct: number
+  reading_consistency_pct: number
+  fasting_consistency_pct: number
+  qiyam_consistency_pct: number
   active_days: number
   days_since_joining: number
   total_points: number

@@ -64,9 +64,9 @@ export function usePersonalStats() {
         setStats({
           streak,
           consistency_pct: statsResult.stats.consistency_pct,
-          reading_pct: statsResult.stats.reading_pct,
-          fasting_pct: statsResult.stats.fasting_pct,
-          qiyam_pct: statsResult.stats.qiyam_pct,
+          reading_consistency_pct: statsResult.stats.reading_consistency_pct,
+          fasting_consistency_pct: statsResult.stats.fasting_consistency_pct,
+          qiyam_consistency_pct: statsResult.stats.qiyam_consistency_pct,
           active_days: statsResult.stats.active_days,
           days_since_joining: statsResult.stats.days_since_joining,
           total_points: statsResult.stats.total_points,

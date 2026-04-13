@@ -104,9 +104,9 @@ export default function UserProfileScreen() {
 
           <View style={styles.barSection}>
             {[
-              { label: 'Quran', pct: stats.stats.reading_pct, color: colors.emerald },
-              { label: 'Fasting', pct: stats.stats.fasting_pct, color: colors.amber },
-              { label: 'Qiyam', pct: stats.stats.qiyam_pct, color: colors.purple },
+              { label: 'Quran', pct: stats.stats.reading_consistency_pct, color: colors.emerald },
+              { label: 'Fasting', pct: stats.stats.fasting_consistency_pct, color: colors.amber },
+              { label: 'Qiyam', pct: stats.stats.qiyam_consistency_pct, color: colors.purple },
             ].map(({ label, pct, color }) => (
               <View key={label} style={styles.barRow}>
                 <Text style={styles.barLabel}>{label}</Text>

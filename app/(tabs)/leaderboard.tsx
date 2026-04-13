@@ -18,8 +18,8 @@ import type { LeaderboardSort } from '../../src/types'
 const TABS: { key: LeaderboardSort; label: string; icon: string }[] = [
   { key: 'consistency_pct', label: 'Consistency', icon: '📊' },
   { key: 'total_points', label: 'Points', icon: '⭐' },
-  { key: 'reading_pct', label: 'Quran', icon: '📖' },
-  { key: 'fasting_pct', label: 'Fasting', icon: '🌙' },
+  { key: 'reading_consistency_pct', label: 'Quran', icon: '📖' },
+  { key: 'fasting_consistency_pct', label: 'Fasting', icon: '🌙' },
 ]
 
 const GENDERS = [
