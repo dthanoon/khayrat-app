@@ -1,5 +1,5 @@
 import 'react-native-url-polyfill/auto'
-import React, { useEffect } from 'react'
+import React, { useEffect, useRef } from 'react'
 import { View, Text, StyleSheet, Animated, Pressable } from 'react-native'
 import { Stack, useRouter, useSegments } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
@@ -8,6 +8,7 @@ import { supabase } from '../src/services/supabase'
 import { getProfile } from '../src/services/profiles'
 import { useStore } from '../src/store/useStore'
 import { colors } from '../src/constants/theme'
+import { AppSplashScreen } from '../src/components/SplashLogo'
 
 SplashScreen.preventAutoHideAsync()
 
@@ -51,23 +52,29 @@ function ToastOverlay() {
 }
 
 function AuthGate({ children }: { children: React.ReactNode }) {
-  const { session, setSession, setProfile, setAuthLoading } = useStore()
+  const { session, setSession, setProfile, setAuthLoading, isAuthLoading } = useStore()
   const segments = useSegments()
   const router = useRouter()
+  const splashOpacity = useRef(new Animated.Value(1)).current
 
   useEffect(() => {
-    // Get initial session
+    // Hide native splash immediately so our custom screen shows
+    SplashScreen.hideAsync()
+
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session)
       if (session?.user.id) {
         const profile = await getProfile(session.user.id).catch(() => null)
         setProfile(profile)
       }
-      setAuthLoading(false)
-      SplashScreen.hideAsync()
+      // Fade out custom splash, then mark auth done
+      Animated.timing(splashOpacity, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+      }).start(() => setAuthLoading(false))
     })
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setSession(session)
       if (session?.user.id) {
@@ -83,7 +90,6 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const inAuthGroup = segments[0] === '(auth)'
-
     if (session === null && !inAuthGroup) {
       router.replace('/(auth)/login')
     } else if (session !== null && inAuthGroup) {
@@ -91,7 +97,20 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     }
   }, [session, segments])
 
-  return <>{children}</>
+  return (
+    <>
+      {children}
+      {/* Custom splash overlay — fades out once auth resolves */}
+      {isAuthLoading && (
+        <Animated.View
+          style={[StyleSheet.absoluteFillObject, { opacity: splashOpacity, zIndex: 999 }]}
+          pointerEvents="none"
+        >
+          <AppSplashScreen />
+        </Animated.View>
+      )}
+    </>
+  )
 }
 
 export default function RootLayout() {
