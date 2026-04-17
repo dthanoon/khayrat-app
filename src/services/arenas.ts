@@ -74,7 +74,7 @@ export async function getArena(arenaId: string, userId: string): Promise<Arena |
   }
 }
 
-/** Join a battle arena (free mode: pick team; auto mode: balanced) */
+/** Join a battle arena (free mode: pick team; auto mode: auto-balanced) */
 export async function joinBattleArena(
   arenaId: string,
   userId: string,
@@ -83,12 +83,27 @@ export async function joinBattleArena(
   inviteCode?: string
 ): Promise<void> {
   if (joinMode === 'auto') {
+    // Try RPC first; if it doesn't exist fall back to client-side team balancing
     const { error } = await supabase.rpc('join_arena_auto', {
       arena_id_param: arenaId,
       user_id_param: userId,
       ...(inviteCode ? { invite_code_param: inviteCode } : {}),
     })
-    if (error) throw error
+    if (!error) return
+    if (error.code !== 'PGRST202') throw error
+
+    // RPC not found — pick the less-populated team, then insert directly
+    const { data: members } = await supabase
+      .from('arena_members')
+      .select('team')
+      .eq('arena_id', arenaId)
+    const rows = (members ?? []) as { team: string | null }[]
+    const autoTeam: 'a' | 'b' =
+      rows.filter(m => m.team === 'a').length <= rows.filter(m => m.team === 'b').length ? 'a' : 'b'
+    const { error: insertError } = await supabase
+      .from('arena_members')
+      .insert({ arena_id: arenaId, user_id: userId, team: autoTeam })
+    if (insertError) throw insertError
   } else {
     const { error } = await supabase
       .from('arena_members')
@@ -99,12 +114,20 @@ export async function joinBattleArena(
 
 /** Join a group arena */
 export async function joinGroupArena(arenaId: string, userId: string, inviteCode?: string): Promise<void> {
+  // Try RPC first; if it doesn't exist fall back to direct insert
   const { error } = await supabase.rpc('join_arena_group', {
     arena_id_param: arenaId,
     user_id_param: userId,
     ...(inviteCode ? { invite_code_param: inviteCode } : {}),
   })
-  if (error) throw error
+  if (!error) return
+  if (error.code !== 'PGRST202') throw error
+
+  // RPC not found — insert directly (team is null for group arenas)
+  const { error: insertError } = await supabase
+    .from('arena_members')
+    .insert({ arena_id: arenaId, user_id: userId, team: null })
+  if (insertError) throw insertError
 }
 
 /** Leave an arena */

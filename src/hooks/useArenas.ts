@@ -84,8 +84,9 @@ export function useArenas() {
         showToast('Joined arena!', 'success')
         load()
       } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : 'Failed to join arena'
+        const msg = (e as any)?.message ?? 'Failed to join arena'
         showToast(msg, 'error')
+        console.error('Join arena error:', e)
       }
     },
     [userId, showToast, load]
@@ -99,7 +100,7 @@ export function useArenas() {
         showToast('Left arena', 'info')
         load()
       } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : 'Failed to leave arena'
+        const msg = (e as any)?.message ?? 'Failed to leave arena'
         showToast(msg, 'error')
       }
     },
