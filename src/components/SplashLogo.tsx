@@ -1,7 +1,10 @@
 import React, { useEffect, useRef } from 'react'
-import { View, Text, StyleSheet, Animated } from 'react-native'
+import { View, Text, StyleSheet, Animated, ScrollView } from 'react-native'
 
-// ─── Change this to 1, 2, or 3 to preview each option ────────────────────────
+// ─── Set true to see all 3 logos on screen at once (for picking) ─────────────
+export const PREVIEW_ALL = true
+
+// ─── Change this to 1, 2, or 3 once you've picked ────────────────────────────
 export const ACTIVE_LOGO_VARIANT: 1 | 2 | 3 = 1
 
 // ─── Option 1: Crescent & Stars ───────────────────────────────────────────────
@@ -129,26 +132,37 @@ export function AppSplashScreen() {
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 700,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        friction: 6,
-        tension: 45,
-        useNativeDriver: true,
-      }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
+      Animated.spring(scaleAnim, { toValue: 1, friction: 6, tension: 45, useNativeDriver: true }),
     ]).start()
   }, [])
 
+  // Preview mode: show all 3 options in a scrollable list so you can pick one
+  if (PREVIEW_ALL) {
+    return (
+      <View style={styles.screen}>
+        <ScrollView contentContainerStyle={styles.previewScroll} showsVerticalScrollIndicator={false}>
+          {([
+            { num: 1, label: 'Option 1 — Crescent & Stars', Logo: CrescentLogo },
+            { num: 2, label: 'Option 2 — Tasbeeh Ring', Logo: TasbeehLogo },
+            { num: 3, label: 'Option 3 — Deed Cards', Logo: DeedCardsLogo },
+          ] as const).map(({ num, label, Logo }) => (
+            <View key={num} style={styles.previewItem}>
+              <Text style={styles.previewLabel}>{label}</Text>
+              <View style={styles.previewCard}>
+                <Logo />
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+      </View>
+    )
+  }
+
   const Logo =
-    ACTIVE_LOGO_VARIANT === 1
-      ? CrescentLogo
-      : ACTIVE_LOGO_VARIANT === 2
-      ? TasbeehLogo
-      : DeedCardsLogo
+    ACTIVE_LOGO_VARIANT === 1 ? CrescentLogo
+    : ACTIVE_LOGO_VARIANT === 2 ? TasbeehLogo
+    : DeedCardsLogo
 
   return (
     <View style={styles.screen}>
@@ -312,5 +326,31 @@ const styles = StyleSheet.create({
     color: '#4b5563',
     letterSpacing: 2.5,
     fontWeight: '500',
+  },
+
+  // Preview mode
+  previewScroll: {
+    alignItems: 'center',
+    paddingVertical: 48,
+    gap: 48,
+  },
+  previewItem: {
+    alignItems: 'center',
+    gap: 20,
+  },
+  previewLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6b7280',
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+  },
+  previewCard: {
+    backgroundColor: '#111111',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#222222',
+    padding: 40,
+    alignItems: 'center',
   },
 })
