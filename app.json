@@ -15,8 +15,13 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.khayrat.app",
+      "deploymentTarget": "14.0",
       "infoPlist": {
-        "NSCameraUsageDescription": "Used for profile photo"
+        "NSCameraUsageDescription": "Used for profile photo",
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": false,
+          "NSAllowsLocalNetworking": true
+        }
       }
     },
     "android": {
@@ -24,7 +29,8 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#0a0a0a"
       },
-      "package": "com.khayrat.app"
+      "package": "com.khayrat.app",
+      "minSdkVersion": 24
     },
     "web": {
       "bundler": "metro",

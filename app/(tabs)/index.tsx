@@ -54,6 +54,8 @@ export default function DashboardScreen() {
           onPress={() => router.push('/settings')}
           style={styles.settingsBtn}
           activeOpacity={0.7}
+          accessibilityLabel="Settings"
+          accessibilityRole="button"
         >
           <Ionicons name="settings-outline" size={22} color={colors.textSecondary} />
         </TouchableOpacity>
