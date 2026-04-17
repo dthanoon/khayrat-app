@@ -6,6 +6,9 @@ import {
   ScrollView,
   TouchableOpacity,
   FlatList,
+  Modal,
+  Pressable,
+  TextInput,
 } from 'react-native'
 import { useLocalSearchParams, useNavigation } from 'expo-router'
 import { useLayoutEffect } from 'react'
@@ -32,6 +35,9 @@ export default function ArenaDetailScreen() {
   const { join, leave } = useArenas()
   const { arena, standings, memberStats, groupLeaderboard, loading, reload } = useArenaDetail(id)
   const [activeTab, setActiveTab] = useState<Tab>('standings')
+  const [showJoinModal, setShowJoinModal] = useState(false)
+  const [joinCode, setJoinCode] = useState('')
+  const [selectedTeam, setSelectedTeam] = useState<'a' | 'b'>('a')
 
   useLayoutEffect(() => {
     if (arena) navigation.setOptions({ title: arena.name })
@@ -43,9 +49,21 @@ export default function ArenaDetailScreen() {
   const statusVariant = status === 'Active' ? 'emerald' : status === 'Upcoming' ? 'amber' : 'gray'
   const isBattle = arena.arena_type === 'battle'
   const isMember = arena.is_member
+  const needsTeamPick = isBattle && arena.join_mode === 'free'
+  const needsCode = !!arena.invite_code
 
-  const handleJoin = () => {
-    join(isBattle && arena.join_mode === 'free' ? arena : arena, 'a')
+  const handleJoinPress = () => {
+    if (needsCode || needsTeamPick) {
+      setShowJoinModal(true)
+    } else {
+      join(arena, 'a')
+      setTimeout(reload, 500)
+    }
+  }
+  const handleJoinConfirm = () => {
+    setShowJoinModal(false)
+    join(arena, selectedTeam, joinCode.trim() || undefined)
+    setJoinCode('')
     setTimeout(reload, 500)
   }
   const handleLeave = () => {
@@ -123,7 +141,7 @@ export default function ArenaDetailScreen() {
             </View>
           ) : (
             status === 'Active' && (
-              <Button title="Join Arena" onPress={handleJoin} fullWidth size="md" />
+              <Button title="Join Arena" onPress={handleJoinPress} fullWidth size="md" />
             )
           )
         )}
@@ -152,6 +170,62 @@ export default function ArenaDetailScreen() {
           )
         })}
       </View>
+
+      {/* ── Join modal (invite code / team selection) ── */}
+      <Modal
+        visible={showJoinModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowJoinModal(false)}
+      >
+        <Pressable style={styles.overlay} onPress={() => setShowJoinModal(false)}>
+          <View style={styles.sheet}>
+            <View style={styles.sheetHandle} />
+            <Text style={styles.sheetTitle}>Join {arena.name}</Text>
+
+            {needsTeamPick && (
+              <>
+                <Text style={styles.sheetLabel}>Choose your team</Text>
+                <View style={styles.teamRow}>
+                  {(['a', 'b'] as const).map(t => (
+                    <TouchableOpacity
+                      key={t}
+                      style={[styles.teamBtn, selectedTeam === t && styles.teamBtnActive]}
+                      onPress={() => setSelectedTeam(t)}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[styles.teamBtnText, selectedTeam === t && styles.teamBtnTextActive]}>
+                        {t === 'a' ? (arena.team_a_name ?? 'Team A') : (arena.team_b_name ?? 'Team B')}
+                      </Text>
+                      <Text style={styles.teamMemberCount}>
+                        {(t === 'a' ? arena.team_a_count : arena.team_b_count) ?? 0} members
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </>
+            )}
+
+            {needsCode && (
+              <>
+                <Text style={styles.sheetLabel}>Invite code</Text>
+                <TextInput
+                  style={styles.codeInput}
+                  value={joinCode}
+                  onChangeText={setJoinCode}
+                  placeholder="Enter invite code"
+                  placeholderTextColor={colors.textMuted}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  selectionColor={colors.emerald}
+                />
+              </>
+            )}
+
+            <Button title="Confirm Join" onPress={handleJoinConfirm} fullWidth size="lg" />
+          </View>
+        </Pressable>
+      </Modal>
 
       {/* ── Content (fills remaining space per tab) ── */}
       <View style={styles.content}>
@@ -530,6 +604,69 @@ const styles = StyleSheet.create({
   tabBtnTextActive: { color: colors.emerald },
 
   content: { flex: 1 },
+
+  // Join modal
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    backgroundColor: colors.bgCard,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: spacing.xl,
+    gap: spacing.lg,
+    borderTopWidth: 1,
+    borderColor: colors.border,
+    paddingBottom: 36,
+  },
+  sheetHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.border,
+    alignSelf: 'center',
+  },
+  sheetTitle: {
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
+    color: colors.textPrimary,
+  },
+  sheetLabel: {
+    fontSize: fontSize.sm,
+    color: colors.textMuted,
+    fontWeight: fontWeight.medium,
+  },
+  teamRow: { flexDirection: 'row', gap: spacing.md },
+  teamBtn: {
+    flex: 1,
+    padding: spacing.lg,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.bgInput,
+    alignItems: 'center',
+    gap: 4,
+  },
+  teamBtnActive: { borderColor: colors.emerald, backgroundColor: colors.emeraldDim },
+  teamBtnText: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.textSecondary,
+  },
+  teamBtnTextActive: { color: colors.emeraldLight },
+  teamMemberCount: { fontSize: fontSize.xs, color: colors.textMuted },
+  codeInput: {
+    backgroundColor: colors.bgInput,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.md,
+    height: 46,
+    fontSize: fontSize.md,
+    color: colors.textPrimary,
+  },
 
   // Battle standings
   standingsPad: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl },

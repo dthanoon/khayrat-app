@@ -79,12 +79,14 @@ export async function joinBattleArena(
   arenaId: string,
   userId: string,
   team: 'a' | 'b',
-  joinMode: 'free' | 'auto'
+  joinMode: 'free' | 'auto',
+  inviteCode?: string
 ): Promise<void> {
   if (joinMode === 'auto') {
     const { error } = await supabase.rpc('join_arena_auto', {
       arena_id_param: arenaId,
       user_id_param: userId,
+      ...(inviteCode ? { invite_code_param: inviteCode } : {}),
     })
     if (error) throw error
   } else {
@@ -96,10 +98,11 @@ export async function joinBattleArena(
 }
 
 /** Join a group arena */
-export async function joinGroupArena(arenaId: string, userId: string): Promise<void> {
+export async function joinGroupArena(arenaId: string, userId: string, inviteCode?: string): Promise<void> {
   const { error } = await supabase.rpc('join_arena_group', {
     arena_id_param: arenaId,
     user_id_param: userId,
+    ...(inviteCode ? { invite_code_param: inviteCode } : {}),
   })
   if (error) throw error
 }

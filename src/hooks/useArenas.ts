@@ -59,17 +59,27 @@ export function useArenas() {
     async (arena: Arena, team?: 'a' | 'b', inviteCode?: string) => {
       if (!userId) return
 
-      // Validate invite code if needed
-      if (arena.invite_code && inviteCode !== arena.invite_code) {
-        showToast('Invalid invite code', 'error')
-        return
+      // Client-side invite code check (case-insensitive, trimmed) for immediate feedback.
+      // Server-side RPCs validate independently — the code is always forwarded below.
+      if (arena.invite_code) {
+        const entered = (inviteCode ?? '').trim().toLowerCase()
+        const expected = arena.invite_code.trim().toLowerCase()
+        if (!entered) {
+          showToast('This arena requires an invite code', 'error')
+          return
+        }
+        if (entered !== expected) {
+          showToast('Invalid invite code', 'error')
+          return
+        }
       }
 
+      const code = inviteCode?.trim() || undefined
       try {
         if (arena.arena_type === 'battle') {
-          await joinBattleArena(arena.id, userId, team ?? 'a', arena.join_mode)
+          await joinBattleArena(arena.id, userId, team ?? 'a', arena.join_mode, code)
         } else {
-          await joinGroupArena(arena.id, userId)
+          await joinGroupArena(arena.id, userId, code)
         }
         showToast('Joined arena!', 'success')
         load()
