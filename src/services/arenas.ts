@@ -123,10 +123,10 @@ export async function joinGroupArena(arenaId: string, userId: string, inviteCode
   if (!error) return
   if (error.code !== 'PGRST202') throw error
 
-  // RPC not found — insert directly (team is null for group arenas)
+  // RPC not found — insert directly (group arenas have no real teams; use 'a' as placeholder)
   const { error: insertError } = await supabase
     .from('arena_members')
-    .insert({ arena_id: arenaId, user_id: userId, team: null })
+    .insert({ arena_id: arenaId, user_id: userId, team: 'a' })
   if (insertError) throw insertError
 }
 
