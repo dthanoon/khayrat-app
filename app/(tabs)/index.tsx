@@ -19,10 +19,9 @@ import { colors, spacing, fontSize, fontWeight } from '../../src/constants/theme
 export default function DashboardScreen() {
   const router = useRouter()
   const { profile } = useAuth()
-  const { arenas, loading: arenasLoading, refreshing, refresh, join, leave } = useArenas()
+  const { arenas, loading: arenasLoading, refreshing, refresh, leave } = useArenas()
 
   const myArenas = arenas.filter(a => a.is_member)
-  const openArenas = arenas.filter(a => !a.is_member)
 
   const greeting = () => {
     const h = new Date().getHours()
@@ -83,25 +82,6 @@ export default function DashboardScreen() {
         </Section>
       )}
 
-      {/* Open Arenas to Join */}
-      {openArenas.length > 0 && (
-        <Section
-          title="Open Arenas"
-          action={
-            <TouchableOpacity onPress={() => router.push('/(tabs)/arenas')}>
-              <Text style={styles.seeAll}>See all</Text>
-            </TouchableOpacity>
-          }
-        >
-          {openArenas.slice(0, 2).map(arena => (
-            <ArenaCard
-              key={arena.id}
-              arena={arena}
-              onJoin={join}
-            />
-          ))}
-        </Section>
-      )}
 
       <View style={styles.bottomPad} />
     </ScrollView>
@@ -162,11 +142,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontWeight: fontWeight.semibold,
     color: colors.textPrimary,
-  },
-  seeAll: {
-    fontSize: fontSize.sm,
-    color: colors.emerald,
-    fontWeight: fontWeight.medium,
   },
   bottomPad: { height: spacing.xl },
 })

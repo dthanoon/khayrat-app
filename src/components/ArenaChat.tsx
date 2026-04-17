@@ -20,6 +20,8 @@ import type { ArenaMessage } from '../types'
 
 const QUICK_EMOJIS = ['👍', '❤️', '😂', '🤲', '🌟', '💪', '🥇', '🤩']
 
+// ─── Message bubble ───────────────────────────────────────────────────────────
+
 interface MessageBubbleProps {
   message: ArenaMessage
   isMe: boolean
@@ -28,38 +30,68 @@ interface MessageBubbleProps {
 }
 
 function MessageBubble({ message, isMe, onLongPress, currentUserId }: MessageBubbleProps) {
-  // Highlight @mentions of current user's username
-  const renderContent = (text: string) => {
-    // Simple @mention highlighting
-    const parts = text.split(/(@\w+)/g)
-    return (
-      <Text style={[styles.messageText, isMe && styles.messageTextMe]}>
-        {parts.map((part, i) =>
-          part.startsWith('@') ? (
-            <Text key={i} style={styles.mention}>{part}</Text>
-          ) : (
-            part
-          )
-        )}
-      </Text>
-    )
-  }
+  // Group reactions by emoji
+  const reactionGroups: Record<string, { count: number; mine: boolean }> = {}
+  message.reactions?.forEach(r => {
+    if (!reactionGroups[r.emoji]) reactionGroups[r.emoji] = { count: 0, mine: false }
+    reactionGroups[r.emoji].count++
+    if (r.user_id === currentUserId) reactionGroups[r.emoji].mine = true
+  })
+  const reactionEntries = Object.entries(reactionGroups)
+
+  // @mention highlighting
+  const contentParts = message.content.split(/(@\w+)/g)
 
   return (
-    <TouchableOpacity
-      onLongPress={() => onLongPress(message)}
-      delayLongPress={400}
-      activeOpacity={0.9}
-      style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubbleOther]}
-    >
+    <View style={[styles.msgRow, isMe && styles.msgRowMe]}>
+      {/* Avatar — only for others */}
       {!isMe && (
-        <Text style={styles.senderName}>{message.profiles?.username ?? 'Unknown'}</Text>
+        <View style={styles.msgAvatar}>
+          <Text style={styles.msgAvatarText}>
+            {(message.profiles?.username ?? '?')[0].toUpperCase()}
+          </Text>
+        </View>
       )}
-      {renderContent(message.content)}
-      <Text style={[styles.time, isMe && styles.timeMe]}>{timeAgo(message.created_at)}</Text>
-    </TouchableOpacity>
+
+      {/* Bubble + reactions stacked */}
+      <View style={[styles.bubbleCol, isMe && styles.bubbleColMe]}>
+        <TouchableOpacity
+          onLongPress={() => onLongPress(message)}
+          delayLongPress={400}
+          activeOpacity={0.85}
+          style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubbleOther]}
+        >
+          {!isMe && (
+            <Text style={styles.senderName}>{message.profiles?.username ?? 'Unknown'}</Text>
+          )}
+          <Text style={[styles.messageText, isMe && styles.messageTextMe]}>
+            {contentParts.map((part, i) =>
+              part.startsWith('@')
+                ? <Text key={i} style={styles.mention}>{part}</Text>
+                : part
+            )}
+          </Text>
+          <Text style={[styles.timeText, isMe && styles.timeTextMe]}>
+            {timeAgo(message.created_at)}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Reaction pills */}
+        {reactionEntries.length > 0 && (
+          <View style={[styles.reactionsRow, isMe && styles.reactionsRowMe]}>
+            {reactionEntries.map(([emoji, { count, mine }]) => (
+              <View key={emoji} style={[styles.reactionPill, mine && styles.reactionPillMine]}>
+                <Text style={styles.reactionPillText}>{emoji} {count}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+    </View>
   )
 }
+
+// ─── Main component ───────────────────────────────────────────────────────────
 
 interface Props {
   arenaId: string
@@ -72,16 +104,14 @@ export function ArenaChat({ arenaId, currentUserId }: Props) {
   const [reactionTarget, setReactionTarget] = useState<ArenaMessage | null>(null)
   const flatListRef = useRef<FlatList>(null)
 
+  const hasText = content.trim().length > 0
+
   const handleSend = async () => {
-    if (!content.trim()) return
-    const text = content
+    if (!hasText) return
+    const text = content.trim()
     setContent('')
     await send(text)
-    setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100)
-  }
-
-  const handleLongPress = (message: ArenaMessage) => {
-    setReactionTarget(message)
+    setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 80)
   }
 
   const handleReact = async (emoji: string) => {
@@ -95,27 +125,29 @@ export function ArenaChat({ arenaId, currentUserId }: Props) {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={120}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
       <FlatList
         ref={flatListRef}
         data={messages}
-        keyExtractor={(item) => item.id}
+        keyExtractor={item => item.id}
         renderItem={({ item }) => (
           <MessageBubble
             message={item}
             isMe={item.user_id === currentUserId}
-            onLongPress={handleLongPress}
+            onLongPress={setReactionTarget}
             currentUserId={currentUserId}
           />
         )}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={styles.listContent}
         onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
+        showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Ionicons name="chatbubbles-outline" size={32} color={colors.textMuted} />
-            <Text style={styles.emptyText}>No messages yet. Say Salam!</Text>
+            <Text style={styles.emptyIcon}>💬</Text>
+            <Text style={styles.emptyTitle}>No messages yet</Text>
+            <Text style={styles.emptyText}>Be the first to say Salam!</Text>
           </View>
         }
       />
@@ -126,26 +158,28 @@ export function ArenaChat({ arenaId, currentUserId }: Props) {
           style={styles.input}
           value={content}
           onChangeText={setContent}
-          placeholder="Message… (use @username to mention)"
+          placeholder="Type a message…"
           placeholderTextColor={colors.textMuted}
           selectionColor={colors.emerald}
           multiline
           maxLength={1000}
-          returnKeyType="send"
-          onSubmitEditing={handleSend}
-          blurOnSubmit={false}
+          returnKeyType="default"
         />
         <TouchableOpacity
           onPress={handleSend}
-          disabled={sending || !content.trim()}
-          style={[styles.sendBtn, (!content.trim() || sending) && styles.sendBtnDisabled]}
+          disabled={sending || !hasText}
+          style={[styles.sendBtn, hasText && styles.sendBtnActive]}
           activeOpacity={0.8}
         >
-          <Ionicons name="send" size={18} color={!content.trim() || sending ? colors.textMuted : colors.emerald} />
+          <Ionicons
+            name={sending ? 'ellipsis-horizontal' : 'send'}
+            size={17}
+            color={hasText ? '#000' : colors.textMuted}
+          />
         </TouchableOpacity>
       </View>
 
-      {/* Emoji reaction picker modal */}
+      {/* Emoji reaction picker */}
       <Modal
         visible={!!reactionTarget}
         transparent
@@ -153,9 +187,10 @@ export function ArenaChat({ arenaId, currentUserId }: Props) {
         onRequestClose={() => setReactionTarget(null)}
       >
         <Pressable style={styles.overlay} onPress={() => setReactionTarget(null)}>
-          <View style={styles.emojiPicker}>
-            <Text style={styles.emojiTitle}>React to message</Text>
-            <View style={styles.emojiRow}>
+          <View style={styles.emojiSheet}>
+            <View style={styles.emojiSheetHandle} />
+            <Text style={styles.emojiSheetTitle}>React</Text>
+            <View style={styles.emojiGrid}>
               {QUICK_EMOJIS.map(emoji => (
                 <TouchableOpacity
                   key={emoji}
@@ -163,7 +198,7 @@ export function ArenaChat({ arenaId, currentUserId }: Props) {
                   style={styles.emojiBtn}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.emoji}>{emoji}</Text>
+                  <Text style={styles.emojiChar}>{emoji}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -175,61 +210,121 @@ export function ArenaChat({ arenaId, currentUserId }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  list: {
+  container: { flex: 1, backgroundColor: colors.bg },
+
+  listContent: {
     padding: spacing.md,
-    gap: spacing.sm,
     paddingBottom: spacing.lg,
+    gap: 2,
   },
-  bubble: {
-    maxWidth: '80%',
-    padding: spacing.md,
-    borderRadius: radius.lg,
+
+  // Message row
+  msgRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  msgRowMe: { flexDirection: 'row-reverse' },
+
+  msgAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.bgCardAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    flexShrink: 0,
+  },
+  msgAvatarText: {
+    fontSize: 11,
+    fontWeight: fontWeight.bold,
+    color: colors.textSecondary,
+  },
+
+  bubbleCol: {
+    flex: 1,
+    alignItems: 'flex-start',
     gap: 4,
-    marginBottom: 4,
+    maxWidth: '82%',
+  },
+  bubbleColMe: { alignItems: 'flex-end' },
+
+  bubble: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.lg,
+    gap: 3,
   },
   bubbleOther: {
     backgroundColor: colors.bgCard,
     borderWidth: 1,
     borderColor: colors.border,
-    alignSelf: 'flex-start',
     borderBottomLeftRadius: 4,
+    alignSelf: 'flex-start',
   },
   bubbleMe: {
     backgroundColor: colors.emeraldDim,
     borderWidth: 1,
-    borderColor: `${colors.emerald}40`,
-    alignSelf: 'flex-end',
+    borderColor: `${colors.emerald}50`,
     borderBottomRightRadius: 4,
+    alignSelf: 'flex-end',
   },
   senderName: {
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
     color: colors.emerald,
-    marginBottom: 2,
   },
   messageText: {
     fontSize: fontSize.md,
     color: colors.textPrimary,
     lineHeight: 20,
   },
-  messageTextMe: { color: '#e2fdf0' },
-  mention: {
-    color: colors.amber,
-    fontWeight: fontWeight.semibold,
-  },
-  time: {
-    fontSize: fontSize.xs,
+  messageTextMe: { color: '#d1fae5' },
+  mention: { color: colors.amber, fontWeight: fontWeight.semibold },
+  timeText: {
+    fontSize: 10,
     color: colors.textMuted,
     alignSelf: 'flex-start',
+    marginTop: 2,
   },
-  timeMe: { alignSelf: 'flex-end' },
+  timeTextMe: { alignSelf: 'flex-end' },
 
+  // Reactions
+  reactionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+    paddingLeft: 2,
+  },
+  reactionsRowMe: { paddingLeft: 0, paddingRight: 2, justifyContent: 'flex-end' },
+  reactionPill: {
+    backgroundColor: colors.bgCardAlt,
+    borderRadius: radius.full,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  reactionPillMine: {
+    borderColor: `${colors.emerald}80`,
+    backgroundColor: `${colors.emerald}15`,
+  },
+  reactionPillText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+
+  // Input bar
   inputBar: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: spacing.sm,
-    padding: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingBottom: Platform.OS === 'ios' ? spacing.sm : spacing.md,
     borderTopWidth: 1,
     borderTopColor: colors.border,
     backgroundColor: colors.bg,
@@ -241,62 +336,86 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: colors.border,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.sm,
     fontSize: fontSize.md,
     color: colors.textPrimary,
     maxHeight: 120,
+    minHeight: 40,
   },
   sendBtn: {
     width: 40,
     height: 40,
-    borderRadius: radius.full,
+    borderRadius: 20,
     backgroundColor: colors.bgCard,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.border,
   },
-  sendBtnDisabled: { opacity: 0.5 },
+  sendBtnActive: {
+    backgroundColor: colors.emerald,
+    borderColor: colors.emerald,
+  },
 
+  // Empty state
   empty: {
     alignItems: 'center',
-    paddingTop: 40,
-    gap: spacing.md,
+    paddingTop: 60,
+    gap: spacing.sm,
   },
-  emptyText: {
-    fontSize: fontSize.sm,
-    color: colors.textMuted,
+  emptyIcon: { fontSize: 40 },
+  emptyTitle: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.semibold,
+    color: colors.textSecondary,
   },
+  emptyText: { fontSize: fontSize.sm, color: colors.textMuted },
 
+  // Emoji modal
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    justifyContent: 'flex-end',
   },
-  emojiPicker: {
+  emojiSheet: {
     backgroundColor: colors.bgCard,
-    borderRadius: radius.xl,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     padding: spacing.xl,
+    paddingBottom: 36,
     gap: spacing.lg,
-    width: 320,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
-  emojiTitle: {
+  emojiSheetHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.border,
+    alignSelf: 'center',
+  },
+  emojiSheetTitle: {
     fontSize: fontSize.md,
     fontWeight: fontWeight.semibold,
     color: colors.textSecondary,
     textAlign: 'center',
   },
-  emojiRow: {
+  emojiGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
     gap: spacing.md,
   },
   emojiBtn: {
-    padding: spacing.sm,
+    width: 52,
+    height: 52,
+    borderRadius: radius.md,
+    backgroundColor: colors.bgCardAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  emoji: { fontSize: 28 },
+  emojiChar: { fontSize: 26 },
 })

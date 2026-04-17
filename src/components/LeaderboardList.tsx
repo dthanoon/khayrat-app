@@ -22,6 +22,7 @@ function LeaderboardRow({ entry, currentUserId, sortKey }: RowProps) {
   if (sortKey === 'total_points') displayValue = String(entry.total_points)
   else if (sortKey === 'reading_consistency_pct') displayValue = formatPct(entry.reading_consistency_pct)
   else if (sortKey === 'fasting_consistency_pct') displayValue = formatPct(entry.fasting_consistency_pct)
+  else if (sortKey === 'qiyam_consistency_pct') displayValue = formatPct(entry.qiyam_consistency_pct)
   else displayValue = formatPct(entry.consistency_pct)
 
   const valueColor =
@@ -32,6 +33,8 @@ function LeaderboardRow({ entry, currentUserId, sortKey }: RowProps) {
             ? entry.reading_consistency_pct
             : sortKey === 'fasting_consistency_pct'
             ? entry.fasting_consistency_pct
+            : sortKey === 'qiyam_consistency_pct'
+            ? entry.qiyam_consistency_pct
             : entry.consistency_pct
         )
 

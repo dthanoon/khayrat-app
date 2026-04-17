@@ -48,6 +48,7 @@ export type LeaderboardSort =
   | 'total_points'
   | 'reading_consistency_pct'
   | 'fasting_consistency_pct'
+  | 'qiyam_consistency_pct'
 
 export interface LeaderboardEntry {
   user_id: string
@@ -164,4 +165,38 @@ export interface PersonalStatsData {
   days_since_joining: number
   total_points: number
   rank?: number
+  gender?: string | null
+  country?: string | null
+}
+
+export interface ComparativeRanks {
+  globalRank: number
+  globalTotal: number
+  genderRank: number | null
+  genderTotal: number | null
+  countryRank: number | null
+  countryTotal: number | null
+  gender: string | null
+  country: string | null
+}
+
+export interface MetricRanks {
+  rank: number
+  total: number
+}
+
+export interface MetricContext {
+  global: MetricRanks
+  gender: MetricRanks | null
+  country: MetricRanks | null
+}
+
+export interface AllComparativeRanks {
+  gender: string | null
+  country: string | null
+  consistency: MetricContext
+  quran: MetricContext
+  fasting: MetricContext
+  qiyam: MetricContext
+  points: MetricContext
 }

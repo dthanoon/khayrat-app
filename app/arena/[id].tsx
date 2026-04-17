@@ -23,19 +23,18 @@ import { colors, spacing, fontSize, fontWeight, radius } from '../../src/constan
 
 type Tab = 'standings' | 'members' | 'chat'
 
+// ─── Screen ───────────────────────────────────────────────────────────────────
+
 export default function ArenaDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const navigation = useNavigation()
   const { userId } = useAuth()
   const { join, leave } = useArenas()
   const { arena, standings, memberStats, groupLeaderboard, loading, reload } = useArenaDetail(id)
-
   const [activeTab, setActiveTab] = useState<Tab>('standings')
 
   useLayoutEffect(() => {
-    if (arena) {
-      navigation.setOptions({ title: arena.name })
-    }
+    if (arena) navigation.setOptions({ title: arena.name })
   }, [arena, navigation])
 
   if (loading || !arena) return <LoadingSpinner fullScreen message="Loading arena…" />
@@ -46,167 +45,155 @@ export default function ArenaDetailScreen() {
   const isMember = arena.is_member
 
   const handleJoin = () => {
-    if (isBattle && arena.join_mode === 'free') {
-      // For simplicity, default to team A; the Arenas screen has the full flow
-      join(arena, 'a')
-    } else {
-      join(arena)
-    }
+    join(isBattle && arena.join_mode === 'free' ? arena : arena, 'a')
     setTimeout(reload, 500)
   }
-
   const handleLeave = () => {
     leave(arena.id)
     setTimeout(reload, 500)
   }
 
+  const TABS: { key: Tab; icon: keyof typeof Ionicons.glyphMap; label: string }[] = [
+    { key: 'standings', icon: 'trophy-outline', label: 'Standings' },
+    { key: 'members', icon: 'people-outline', label: 'Members' },
+    { key: 'chat', icon: 'chatbubbles-outline', label: 'Chat' },
+  ]
+
   return (
-    <View style={styles.container}>
-      <ScrollView stickyHeaderIndices={[1]}>
-        {/* Arena header */}
-        <View style={styles.header}>
-          <View style={styles.headerTop}>
-            <Text style={styles.arenaName}>{arena.name}</Text>
-            <Badge label={status} variant={statusVariant} />
-          </View>
+    <View style={styles.screen}>
+      {/* ── Compact arena header ── */}
+      <View style={styles.header}>
+        <View style={styles.headerTop}>
           <View style={styles.headerMeta}>
+            <Badge label={status} variant={statusVariant} />
             <Badge label={isBattle ? 'Battle' : 'Group'} variant={isBattle ? 'purple' : 'sky'} size="sm" />
             <Text style={styles.dates}>
               {formatDateShort(arena.starts_at)} – {formatDateShort(arena.ends_at)}
             </Text>
           </View>
-
-          {/* Team overview for battle arenas */}
-          {isBattle && (
-            <View style={styles.teamsRow}>
-              <Card style={styles.teamCard}>
-                <Text style={styles.teamCardName} numberOfLines={1}>
-                  {arena.team_a_name ?? 'Team A'}
-                </Text>
-                <Text style={styles.teamCardCount}>{arena.team_a_count ?? 0}</Text>
-                <Text style={styles.teamCardLabel}>members</Text>
-                {standings[0] && (
-                  <Text style={[styles.teamAvg, { color: consistencyColor(standings[0].avg_reading_pct) }]}>
-                    {formatPct(standings[0].avg_reading_pct)} avg
-                  </Text>
-                )}
-              </Card>
-
-              <View style={styles.vsBox}>
-                <Text style={styles.vsText}>VS</Text>
-              </View>
-
-              <Card style={[styles.teamCard, styles.teamCardRight]}>
-                <Text style={styles.teamCardName} numberOfLines={1}>
-                  {arena.team_b_name ?? 'Team B'}
-                </Text>
-                <Text style={styles.teamCardCount}>{arena.team_b_count ?? 0}</Text>
-                <Text style={styles.teamCardLabel}>members</Text>
-                {standings[1] && (
-                  <Text style={[styles.teamAvg, { color: consistencyColor(standings[1].avg_reading_pct) }]}>
-                    {formatPct(standings[1].avg_reading_pct)} avg
-                  </Text>
-                )}
-              </Card>
-            </View>
-          )}
-
-          {/* Member count for group arenas */}
-          {!isBattle && (
-            <View style={styles.groupCount}>
-              <Ionicons name="people-outline" size={16} color={colors.textMuted} />
-              <Text style={styles.groupCountText}>
-                {arena.member_count ?? 0}
-                {arena.max_members ? ` / ${arena.max_members}` : ''} members
-              </Text>
-            </View>
-          )}
-
-          {/* Join/leave */}
-          {status !== 'Ended' && (
-            <View style={styles.joinRow}>
-              {isMember ? (
-                <View style={styles.memberRow}>
-                  <View style={styles.memberBadge}>
-                    <Ionicons name="checkmark-circle" size={16} color={colors.emerald} />
-                    <Text style={styles.memberBadgeText}>
-                      Member{isBattle && arena.my_team
-                        ? ` · ${arena.my_team === 'a' ? arena.team_a_name : arena.team_b_name}`
-                        : ''}
-                    </Text>
-                  </View>
-                  <Button
-                    title="Leave"
-                    onPress={handleLeave}
-                    variant="ghost"
-                    size="sm"
-                    textStyle={{ color: colors.textMuted }}
-                  />
-                </View>
-              ) : (
-                status === 'Active' && (
-                  <Button
-                    title="Join Arena"
-                    onPress={handleJoin}
-                    fullWidth
-                    size="md"
-                  />
-                )
-              )}
-            </View>
-          )}
         </View>
 
-        {/* Tabs header (sticky) */}
-        <View style={styles.tabsContainer}>
-          {(['standings', 'members', 'chat'] as Tab[]).map(tab => (
-            <TouchableOpacity
-              key={tab}
-              style={[styles.tabBtn, activeTab === tab && styles.tabBtnActive]}
-              onPress={() => setActiveTab(tab)}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.tabBtnText, activeTab === tab && styles.tabBtnTextActive]}>
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+        {/* Battle: compact team overview */}
+        {isBattle && (
+          <View style={styles.teamsRow}>
+            <View style={styles.teamSide}>
+              <Text style={styles.teamSideName} numberOfLines={1}>
+                {arena.team_a_name ?? 'Team A'}
               </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Tab content */}
-        {activeTab === 'standings' && (
-          <View style={styles.tabContent}>
-            {isBattle ? (
-              <BattleStandings
-                standings={standings}
-                memberStats={memberStats}
-                teamAName={arena.team_a_name ?? 'Team A'}
-                teamBName={arena.team_b_name ?? 'Team B'}
-              />
-            ) : (
-              <GroupLeaderboard entries={groupLeaderboard} currentUserId={userId} />
-            )}
+              <Text style={styles.teamSideCount}>{arena.team_a_count ?? 0} members</Text>
+            </View>
+            <View style={styles.vsCircle}>
+              <Text style={styles.vsText}>VS</Text>
+            </View>
+            <View style={[styles.teamSide, styles.teamSideRight]}>
+              <Text style={styles.teamSideName} numberOfLines={1}>
+                {arena.team_b_name ?? 'Team B'}
+              </Text>
+              <Text style={styles.teamSideCount}>{arena.team_b_count ?? 0} members</Text>
+            </View>
           </View>
         )}
 
-        {activeTab === 'members' && (
-          <MembersList memberStats={memberStats} currentUserId={userId} />
+        {/* Group: member count */}
+        {!isBattle && (
+          <View style={styles.groupCountRow}>
+            <Ionicons name="people-outline" size={14} color={colors.textMuted} />
+            <Text style={styles.groupCountText}>
+              {arena.member_count ?? 0}
+              {arena.max_members ? ` / ${arena.max_members}` : ''} members
+            </Text>
+          </View>
         )}
-      </ScrollView>
 
-      {/* Chat is full-height, outside the scrollview */}
-      {activeTab === 'chat' && userId && (
-        <View style={styles.chatContainer}>
-          <ArenaChat arenaId={id} currentUserId={userId} />
-        </View>
-      )}
+        {/* Join / leave */}
+        {status !== 'Ended' && (
+          isMember ? (
+            <View style={styles.memberStatusRow}>
+              <View style={styles.memberStatusBadge}>
+                <Ionicons name="checkmark-circle" size={14} color={colors.emerald} />
+                <Text style={styles.memberStatusText}>
+                  Member{isBattle && arena.my_team
+                    ? ` · ${arena.my_team === 'a' ? arena.team_a_name : arena.team_b_name}`
+                    : ''}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={handleLeave} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Text style={styles.leaveText}>Leave</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            status === 'Active' && (
+              <Button title="Join Arena" onPress={handleJoin} fullWidth size="md" />
+            )
+          )
+        )}
+      </View>
+
+      {/* ── Tab bar ── */}
+      <View style={styles.tabBar}>
+        {TABS.map(tab => {
+          const active = activeTab === tab.key
+          return (
+            <TouchableOpacity
+              key={tab.key}
+              style={[styles.tabBtn, active && styles.tabBtnActive]}
+              onPress={() => setActiveTab(tab.key)}
+              activeOpacity={0.8}
+            >
+              <Ionicons
+                name={tab.icon}
+                size={15}
+                color={active ? colors.emerald : colors.textMuted}
+              />
+              <Text style={[styles.tabBtnText, active && styles.tabBtnTextActive]}>
+                {tab.label}
+              </Text>
+            </TouchableOpacity>
+          )
+        })}
+      </View>
+
+      {/* ── Content (fills remaining space per tab) ── */}
+      <View style={styles.content}>
+        {activeTab === 'standings' && (
+          isBattle ? (
+            <BattleStandingsTab
+              standings={standings}
+              memberStats={memberStats}
+              teamAName={arena.team_a_name ?? 'Team A'}
+              teamBName={arena.team_b_name ?? 'Team B'}
+            />
+          ) : (
+            <GroupStandingsTab entries={groupLeaderboard} currentUserId={userId} />
+          )
+        )}
+
+        {activeTab === 'members' && (
+          <MembersTab
+            memberStats={memberStats}
+            currentUserId={userId}
+            isBattle={isBattle}
+            teamAName={arena.team_a_name ?? 'Team A'}
+            teamBName={arena.team_b_name ?? 'Team B'}
+          />
+        )}
+
+        {activeTab === 'chat' && (
+          userId
+            ? <ArenaChat arenaId={id} currentUserId={userId} />
+            : <View style={styles.emptyState}>
+                <Ionicons name="lock-closed-outline" size={40} color={colors.textMuted} />
+                <Text style={styles.emptyStateText}>Sign in to join the chat</Text>
+              </View>
+        )}
+      </View>
     </View>
   )
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// ─── Battle Standings Tab ─────────────────────────────────────────────────────
 
-function BattleStandings({
+function BattleStandingsTab({
   standings,
   memberStats,
   teamAName,
@@ -217,37 +204,99 @@ function BattleStandings({
   teamAName: string
   teamBName: string
 }) {
-  const teamA = memberStats.filter(m => m.team === 'a')
-  const teamB = memberStats.filter(m => m.team === 'b')
+  const standingA = standings.find(s => s.team === 'a') ?? standings[0]
+  const standingB = standings.find(s => s.team === 'b') ?? standings[1]
+  const avgA = standingA?.avg_reading_pct ?? 0
+  const avgB = standingB?.avg_reading_pct ?? 0
+
+  const total = avgA + avgB
+  const barWidthA = total > 0 ? (avgA / total) * 100 : 50
+  const colorA = consistencyColor(avgA)
+  const colorB = consistencyColor(avgB)
+
+  const leader = avgA > avgB ? teamAName : avgB > avgA ? teamBName : null
+  const diff = Math.abs(avgA - avgB)
+
+  const teamAMembers = [...memberStats.filter(m => m.team === 'a')].sort((a, b) => b.reading_pct - a.reading_pct)
+  const teamBMembers = [...memberStats.filter(m => m.team === 'b')].sort((a, b) => b.reading_pct - a.reading_pct)
 
   return (
-    <View style={styles.battleContent}>
-      <MemberLeaderboard members={teamA} title={teamAName} />
-      <MemberLeaderboard members={teamB} title={teamBName} />
-    </View>
+    <ScrollView contentContainerStyle={styles.standingsPad} showsVerticalScrollIndicator={false}>
+      {/* Scoreboard card */}
+      <Card style={styles.scoreCard}>
+        <Text style={styles.scoreCardTitle}>Live Score</Text>
+
+        <View style={styles.scoreRow}>
+          {/* Team A */}
+          <View style={styles.scoreTeam}>
+            <Text style={[styles.scoreAvg, { color: colorA }]}>{formatPct(avgA)}</Text>
+            <Text style={styles.scoreTeamName} numberOfLines={1}>{teamAName}</Text>
+            <Text style={styles.scoreMemberCount}>{standingA?.member_count ?? 0} members</Text>
+          </View>
+
+          {/* Center indicator */}
+          <View style={styles.scoreMiddle}>
+            {leader ? (
+              <View style={styles.leadPill}>
+                <Text style={styles.leadPillText}>+{formatPct(diff)}</Text>
+              </View>
+            ) : (
+              <Text style={styles.tiedLabel}>Tied</Text>
+            )}
+          </View>
+
+          {/* Team B */}
+          <View style={[styles.scoreTeam, { alignItems: 'flex-end' }]}>
+            <Text style={[styles.scoreAvg, { color: colorB }]}>{formatPct(avgB)}</Text>
+            <Text style={styles.scoreTeamName} numberOfLines={1}>{teamBName}</Text>
+            <Text style={styles.scoreMemberCount}>{standingB?.member_count ?? 0} members</Text>
+          </View>
+        </View>
+
+        {/* Battle bar */}
+        <View style={styles.battleBar}>
+          <View style={[styles.battleBarA, { flex: barWidthA, backgroundColor: colorA }]} />
+          <View style={[styles.battleBarB, { flex: 100 - barWidthA, backgroundColor: colorB }]} />
+        </View>
+
+        {leader && (
+          <Text style={styles.leadingLabel}>🏆 {leader} is leading</Text>
+        )}
+      </Card>
+
+      {/* Per-team member rankings */}
+      <View style={styles.teamsColumns}>
+        <TeamRankColumn members={teamAMembers} title={teamAName} accentColor={colorA} />
+        <TeamRankColumn members={teamBMembers} title={teamBName} accentColor={colorB} />
+      </View>
+    </ScrollView>
   )
 }
 
-function MemberLeaderboard({
+function TeamRankColumn({
   members,
   title,
+  accentColor,
 }: {
   members: ReturnType<typeof useArenaDetail>['memberStats']
   title: string
+  accentColor: string
 }) {
   return (
-    <Card style={styles.leaderCard}>
-      <Text style={styles.leaderTitle}>{title}</Text>
+    <Card style={styles.teamRankCard}>
+      <View style={[styles.teamRankHeader, { borderLeftColor: accentColor }]}>
+        <Text style={styles.teamRankTitle} numberOfLines={1}>{title}</Text>
+      </View>
       {members.length === 0 ? (
-        <Text style={styles.emptyText}>No members yet</Text>
+        <Text style={styles.emptyCardText}>No members yet</Text>
       ) : (
         members.map((m, i) => (
-          <View key={m.user_id} style={styles.memberRow2}>
-            <Text style={styles.memberRank}>
-              {i < 3 ? rankBadge(i + 1) : `#${i + 1}`}
+          <View key={m.user_id} style={styles.teamMemberRow}>
+            <Text style={styles.teamMemberRank}>
+              {i < 3 ? rankBadge(i + 1) : `${i + 1}`}
             </Text>
-            <Text style={styles.memberName} numberOfLines={1}>{m.username}</Text>
-            <Text style={[styles.memberPct, { color: consistencyColor(m.reading_pct) }]}>
+            <Text style={styles.teamMemberName} numberOfLines={1}>{m.username}</Text>
+            <Text style={[styles.teamMemberPct, { color: consistencyColor(m.reading_pct) }]}>
               {formatPct(m.reading_pct)}
             </Text>
           </View>
@@ -257,91 +306,163 @@ function MemberLeaderboard({
   )
 }
 
-function GroupLeaderboard({
+// ─── Group Standings Tab ──────────────────────────────────────────────────────
+
+function GroupStandingsTab({
   entries,
   currentUserId,
 }: {
   entries: ReturnType<typeof useArenaDetail>['groupLeaderboard']
   currentUserId: string | null
 }) {
-  return (
-    <View style={styles.tabContent}>
-      {entries.map((entry, i) => (
-        <View
-          key={entry.user_id}
-          style={[styles.groupRow, entry.user_id === currentUserId && styles.groupRowMe]}
-        >
-          <Text style={styles.groupRank}>
-            {i < 3 ? rankBadge(i + 1) : `#${entry.rank}`}
-          </Text>
-          <Text style={styles.groupUsername} numberOfLines={1}>{entry.username}</Text>
-          <Text style={styles.groupPoints}>{entry.total_points} pts</Text>
-        </View>
-      ))}
-      {entries.length === 0 && (
-        <Text style={styles.emptyText}>No data yet</Text>
-      )}
-    </View>
-  )
-}
+  if (entries.length === 0) {
+    return (
+      <View style={styles.emptyState}>
+        <Ionicons name="trophy-outline" size={48} color={colors.textMuted} />
+        <Text style={styles.emptyStateTitle}>No standings yet</Text>
+        <Text style={styles.emptyStateText}>Log your activities to appear on the board</Text>
+      </View>
+    )
+  }
 
-function MembersList({
-  memberStats,
-  currentUserId,
-}: {
-  memberStats: ReturnType<typeof useArenaDetail>['memberStats']
-  currentUserId: string | null
-}) {
   return (
     <FlatList
-      data={memberStats}
+      data={entries}
       keyExtractor={item => item.user_id}
-      renderItem={({ item, index }) => (
-        <View
-          style={[
-            styles.memberItem,
-            item.user_id === currentUserId && styles.memberItemMe,
-          ]}
-        >
-          <Text style={styles.memberRank}>#{index + 1}</Text>
-          <View style={styles.memberAvatar}>
-            <Text style={styles.memberAvatarText}>{item.username[0]?.toUpperCase()}</Text>
-          </View>
-          <Text style={styles.memberName2} numberOfLines={1}>{item.username}</Text>
-          <Text style={[styles.memberPct2, { color: consistencyColor(item.reading_pct) }]}>
-            {formatPct(item.reading_pct)}
-          </Text>
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={{ paddingBottom: spacing.xxl }}
+      ListHeaderComponent={
+        <View style={styles.listColumnHeader}>
+          <Text style={[styles.colLabel, { width: 40 }]}>#</Text>
+          <Text style={[styles.colLabel, { flex: 1, marginLeft: 40 + spacing.sm }]}>Member</Text>
+          <Text style={[styles.colLabel, { width: 40, textAlign: 'right' }]}>Pts</Text>
+          <Text style={[styles.colLabel, { width: 48, textAlign: 'right', marginLeft: spacing.sm }]}>%</Text>
         </View>
-      )}
-      contentContainerStyle={{ paddingBottom: 24 }}
-      scrollEnabled={false}
+      }
+      renderItem={({ item, index }) => {
+        const isMe = item.user_id === currentUserId
+        const rank = item.rank ?? index + 1
+        return (
+          <View style={[styles.groupRow, isMe && styles.groupRowMe]}>
+            <View style={styles.groupRankCell}>
+              {rank <= 3
+                ? <Text style={styles.rankEmoji}>{rankBadge(rank)}</Text>
+                : <Text style={styles.rankNum}>#{rank}</Text>}
+            </View>
+
+            <View style={[styles.groupAvatar, isMe && styles.groupAvatarMe]}>
+              <Text style={styles.groupAvatarText}>{item.username[0]?.toUpperCase()}</Text>
+            </View>
+
+            <View style={styles.groupNameCol}>
+              <Text style={[styles.groupName, isMe && { color: colors.emerald }]} numberOfLines={1}>
+                {item.username}{isMe ? ' (you)' : ''}
+              </Text>
+              <View style={styles.groupActivityRow}>
+                <Text style={styles.groupActivityTag}>📖 {item.reading_days}d</Text>
+                <Text style={styles.groupActivityTag}>🌙 {item.fasting_days}d</Text>
+                <Text style={styles.groupActivityTag}>🌟 {item.qiyam_days}d</Text>
+              </View>
+            </View>
+
+            <Text style={[styles.groupPoints, { color: colors.amber }]}>{item.total_points}</Text>
+            <Text style={[styles.groupPct, { color: consistencyColor(item.reading_pct) }]}>
+              {formatPct(item.reading_pct)}
+            </Text>
+          </View>
+        )
+      }}
     />
   )
 }
 
+// ─── Members Tab ──────────────────────────────────────────────────────────────
+
+function MembersTab({
+  memberStats,
+  currentUserId,
+  isBattle,
+  teamAName,
+  teamBName,
+}: {
+  memberStats: ReturnType<typeof useArenaDetail>['memberStats']
+  currentUserId: string | null
+  isBattle: boolean
+  teamAName: string
+  teamBName: string
+}) {
+  const sorted = [...memberStats].sort((a, b) => b.reading_pct - a.reading_pct)
+
+  if (sorted.length === 0) {
+    return (
+      <View style={styles.emptyState}>
+        <Ionicons name="people-outline" size={48} color={colors.textMuted} />
+        <Text style={styles.emptyStateTitle}>No members yet</Text>
+      </View>
+    )
+  }
+
+  return (
+    <FlatList
+      data={sorted}
+      keyExtractor={item => item.user_id}
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={{ paddingBottom: spacing.xxl }}
+      renderItem={({ item, index }) => {
+        const isMe = item.user_id === currentUserId
+        const teamLabel = isBattle
+          ? item.team === 'a' ? teamAName : item.team === 'b' ? teamBName : null
+          : null
+
+        return (
+          <View style={[styles.memberRow, isMe && styles.memberRowMe]}>
+            <Text style={styles.memberRankNum}>#{index + 1}</Text>
+
+            <View style={[styles.memberAvatar, isMe && styles.memberAvatarMe]}>
+              <Text style={styles.memberAvatarText}>{item.username[0]?.toUpperCase()}</Text>
+            </View>
+
+            <View style={styles.memberInfo}>
+              <Text style={[styles.memberName, isMe && { color: colors.emerald }]} numberOfLines={1}>
+                {item.username}{isMe ? ' (you)' : ''}
+              </Text>
+              {teamLabel && (
+                <Text style={styles.memberTeamTag}>{teamLabel}</Text>
+              )}
+            </View>
+
+            <View style={styles.memberRight}>
+              <Text style={[styles.memberPct, { color: consistencyColor(item.reading_pct) }]}>
+                {formatPct(item.reading_pct)}
+              </Text>
+              <Text style={styles.memberDays}>{item.reading_days} days</Text>
+            </View>
+          </View>
+        )
+      }}
+    />
+  )
+}
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
+  screen: { flex: 1, backgroundColor: colors.bg },
+
+  // Header
   header: {
-    padding: spacing.lg,
-    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
+    gap: spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  headerTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-  },
-  arenaName: {
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.bold,
-    color: colors.textPrimary,
-    flex: 1,
-  },
+  headerTop: {},
   headerMeta: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: spacing.sm,
   },
   dates: { fontSize: fontSize.xs, color: colors.textMuted },
@@ -349,69 +470,46 @@ const styles = StyleSheet.create({
   teamsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    justifyContent: 'space-between',
   },
-  teamCard: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 4,
-    padding: spacing.lg,
-  },
-  teamCardRight: { alignItems: 'center' },
-  teamCardName: {
+  teamSide: { flex: 1, gap: 2 },
+  teamSideRight: { alignItems: 'flex-end' },
+  teamSideName: {
     fontSize: fontSize.sm,
     fontWeight: fontWeight.semibold,
     color: colors.textPrimary,
-    textAlign: 'center',
   },
-  teamCardCount: {
-    fontSize: fontSize.xxl,
-    fontWeight: fontWeight.bold,
-    color: colors.textPrimary,
-  },
-  teamCardLabel: {
-    fontSize: fontSize.xs,
-    color: colors.textMuted,
-  },
-  teamAvg: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
-  },
-  vsBox: {
-    width: 32,
+  teamSideCount: { fontSize: fontSize.xs, color: colors.textMuted },
+  vsCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: colors.bgCardAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  vsText: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.bold,
-    color: colors.textMuted,
-  },
+  vsText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textMuted },
 
-  groupCount: {
+  groupCountRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
   },
   groupCountText: { fontSize: fontSize.sm, color: colors.textSecondary },
 
-  joinRow: { paddingTop: spacing.sm },
-  memberRow: {
+  memberStatusRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  memberBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  memberBadgeText: {
-    fontSize: fontSize.sm,
-    color: colors.emerald,
-    fontWeight: fontWeight.medium,
-  },
+  memberStatusBadge: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  memberStatusText: { fontSize: fontSize.sm, color: colors.emerald, fontWeight: fontWeight.medium },
+  leaveText: { fontSize: fontSize.sm, color: colors.textMuted },
 
-  tabsContainer: {
+  // Tab bar
+  tabBar: {
     flexDirection: 'row',
     backgroundColor: colors.bgCard,
     borderBottomWidth: 1,
@@ -419,120 +517,176 @@ const styles = StyleSheet.create({
   },
   tabBtn: {
     flex: 1,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-  },
-  tabBtnActive: {
-    borderBottomWidth: 2,
-    borderBottomColor: colors.emerald,
-  },
-  tabBtnText: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.medium,
-    color: colors.textMuted,
-  },
-  tabBtnTextActive: { color: colors.emerald },
-
-  tabContent: { padding: spacing.lg, gap: spacing.md },
-  chatContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    marginTop: 260, // approx header height
-  },
-
-  battleContent: { gap: spacing.md },
-  leaderCard: { gap: spacing.md },
-  leaderTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
-    color: colors.textPrimary,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    paddingBottom: spacing.sm,
-  },
-  memberRow2: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.sm,
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 11,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
   },
-  memberRank: {
-    fontSize: fontSize.md,
+  tabBtnActive: { borderBottomColor: colors.emerald },
+  tabBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.textMuted },
+  tabBtnTextActive: { color: colors.emerald },
+
+  content: { flex: 1 },
+
+  // Battle standings
+  standingsPad: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl },
+  scoreCard: { gap: spacing.md },
+  scoreCardTitle: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
     color: colors.textMuted,
-    width: 30,
     textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  memberName: {
-    flex: 1,
-    fontSize: fontSize.md,
-    color: colors.textPrimary,
+  scoreRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  scoreTeam: { flex: 1, gap: 3 },
+  scoreAvg: {
+    fontSize: 32,
+    fontWeight: fontWeight.bold,
+    lineHeight: 36,
+  },
+  scoreTeamName: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
     fontWeight: fontWeight.medium,
   },
-  memberPct: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
+  scoreMemberCount: { fontSize: fontSize.xs, color: colors.textMuted },
+  scoreMiddle: { alignItems: 'center', paddingHorizontal: spacing.sm },
+  leadPill: {
+    backgroundColor: `${colors.emerald}20`,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: `${colors.emerald}50`,
   },
+  leadPillText: { fontSize: fontSize.xs, color: colors.emeraldLight, fontWeight: fontWeight.bold },
+  tiedLabel: { fontSize: fontSize.xs, color: colors.textMuted, fontWeight: fontWeight.bold },
+  battleBar: {
+    height: 10,
+    flexDirection: 'row',
+    borderRadius: radius.full,
+    overflow: 'hidden',
+  },
+  battleBarA: { height: '100%' },
+  battleBarB: { height: '100%' },
+  leadingLabel: { fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center' },
 
+  teamsColumns: { flexDirection: 'row', gap: spacing.md },
+  teamRankCard: { flex: 1, gap: spacing.sm, padding: spacing.md },
+  teamRankHeader: {
+    borderLeftWidth: 3,
+    paddingLeft: spacing.sm,
+    marginBottom: 2,
+  },
+  teamRankTitle: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: colors.textPrimary,
+  },
+  teamMemberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: 5,
+    borderTopWidth: 1,
+    borderTopColor: `${colors.border}60`,
+  },
+  teamMemberRank: { width: 20, fontSize: 13, textAlign: 'center' },
+  teamMemberName: { flex: 1, fontSize: fontSize.sm, color: colors.textPrimary, fontWeight: fontWeight.medium },
+  teamMemberPct: { fontSize: fontSize.sm, fontWeight: fontWeight.bold },
+
+  // Group standings
+  listColumnHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.bgCard,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  colLabel: { fontSize: fontSize.xs, color: colors.textMuted, fontWeight: fontWeight.medium },
   groupRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: spacing.md,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.md,
-    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: `${colors.border}50`,
   },
   groupRowMe: { backgroundColor: `${colors.emerald}0a` },
-  groupRank: { fontSize: fontSize.md, color: colors.textMuted, width: 32 },
-  groupUsername: {
-    flex: 1,
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.medium,
-    color: colors.textPrimary,
+  groupRankCell: { width: 40, alignItems: 'center' },
+  rankEmoji: { fontSize: 18 },
+  rankNum: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary },
+  groupAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.bgCardAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: colors.border,
   },
-  groupPoints: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-    color: colors.amber,
-  },
+  groupAvatarMe: { borderColor: colors.emerald, backgroundColor: colors.emeraldDim },
+  groupAvatarText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textSecondary },
+  groupNameCol: { flex: 1, gap: 2, minWidth: 0 },
+  groupName: { fontSize: fontSize.md, fontWeight: fontWeight.medium, color: colors.textPrimary },
+  groupActivityRow: { flexDirection: 'row', gap: spacing.sm },
+  groupActivityTag: { fontSize: 10, color: colors.textMuted },
+  groupPoints: { width: 40, fontSize: fontSize.sm, fontWeight: fontWeight.bold, textAlign: 'right' },
+  groupPct: { width: 48, fontSize: fontSize.sm, fontWeight: fontWeight.bold, textAlign: 'right', marginLeft: spacing.sm },
 
-  memberItem: {
+  // Members tab
+  memberRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
-    gap: spacing.md,
+    gap: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: `${colors.border}50`,
   },
-  memberItemMe: { backgroundColor: `${colors.emerald}0a` },
+  memberRowMe: { backgroundColor: `${colors.emerald}0a` },
+  memberRankNum: { width: 28, fontSize: fontSize.sm, color: colors.textMuted, fontWeight: fontWeight.medium },
   memberAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: colors.bgCardAlt,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: colors.border,
   },
-  memberAvatarText: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.bold,
-    color: colors.textSecondary,
-  },
-  memberName2: {
+  memberAvatarMe: { borderColor: colors.emerald, backgroundColor: colors.emeraldDim },
+  memberAvatarText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textSecondary },
+  memberInfo: { flex: 1, gap: 2, minWidth: 0 },
+  memberName: { fontSize: fontSize.md, fontWeight: fontWeight.medium, color: colors.textPrimary },
+  memberTeamTag: { fontSize: fontSize.xs, color: colors.textMuted },
+  memberRight: { alignItems: 'flex-end', gap: 2 },
+  memberPct: { fontSize: fontSize.md, fontWeight: fontWeight.bold },
+  memberDays: { fontSize: fontSize.xs, color: colors.textMuted },
+
+  // Empty states
+  emptyState: {
     flex: 1,
-    fontSize: fontSize.md,
-    color: colors.textPrimary,
-    fontWeight: fontWeight.medium,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.md,
+    padding: spacing.xxl,
   },
-  memberPct2: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
-  },
-  emptyText: {
-    fontSize: fontSize.sm,
-    color: colors.textMuted,
-    textAlign: 'center',
-    paddingVertical: spacing.lg,
-  },
+  emptyStateTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.semibold, color: colors.textSecondary },
+  emptyStateText: { fontSize: fontSize.md, color: colors.textMuted, textAlign: 'center' },
+  emptyCardText: { fontSize: fontSize.sm, color: colors.textMuted, textAlign: 'center', paddingVertical: spacing.md },
 })

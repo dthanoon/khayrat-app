@@ -130,32 +130,109 @@ export async function switchTeam(
   if (error) throw error
 }
 
-// ─── Standings ──────────────────────────────────────────────────────────────
+// ─── Standings (computed from direct table queries — no RPCs required) ────────
 
-export async function getArenaStandings(arenaId: string): Promise<ArenaStanding[]> {
-  const { data, error } = await supabase.rpc('get_arena_standings', {
-    arena_id_param: arenaId,
-  })
-  if (error) throw error
-  return (data ?? []) as ArenaStanding[]
+/** Shared helper: resolve arena date range and member log data */
+async function _arenaContext(arenaId: string) {
+  const [{ data: arena }, { data: members }] = await Promise.all([
+    supabase.from('arenas').select('starts_at, ends_at').eq('id', arenaId).maybeSingle(),
+    supabase
+      .from('arena_members')
+      .select('user_id, team, profiles:user_id(username)')
+      .eq('arena_id', arenaId),
+  ])
+
+  if (!arena || !members || members.length === 0) return null
+
+  const startDate = arena.starts_at.split('T')[0]
+  const arenaEnd = arena.ends_at.split('T')[0]
+  const today = new Date().toISOString().split('T')[0]
+  const endDate = arenaEnd < today ? arenaEnd : today
+
+  // Days elapsed (at least 1 to avoid division by zero)
+  const msPerDay = 86_400_000
+  const totalDays = Math.max(
+    1,
+    Math.round((new Date(endDate + 'T00:00:00').getTime() - new Date(startDate + 'T00:00:00').getTime()) / msPerDay) + 1
+  )
+
+  const userIds = (members as any[]).map((m: any) => m.user_id)
+  const { data: logs } = await supabase
+    .from('daily_logs')
+    .select('user_id, quran_reading, fasting, qiyam')
+    .in('user_id', userIds)
+    .gte('log_date', startDate)
+    .lte('log_date', endDate)
+
+  return { members: members as any[], totalDays, logs: (logs ?? []) as any[] }
 }
 
 export async function getArenaMemberStats(arenaId: string): Promise<ArenaMemberStat[]> {
-  const { data, error } = await supabase.rpc('get_arena_member_stats', {
-    arena_id_param: arenaId,
+  const ctx = await _arenaContext(arenaId)
+  if (!ctx) return []
+
+  return ctx.members.map((m: any) => {
+    const ml = ctx.logs.filter((l: any) => l.user_id === m.user_id)
+    const readingDays = ml.filter((l: any) => l.quran_reading).length
+    return {
+      user_id: m.user_id,
+      username: (m.profiles as any)?.username ?? 'Unknown',
+      reading_days: readingDays,
+      reading_pct: Math.round((readingDays / ctx.totalDays) * 100),
+      team: m.team ?? null,
+    } as ArenaMemberStat
   })
-  if (error) throw error
-  return (data ?? []) as ArenaMemberStat[]
+}
+
+export async function getArenaStandings(arenaId: string): Promise<ArenaStanding[]> {
+  const stats = await getArenaMemberStats(arenaId)
+  if (stats.length === 0) return []
+
+  const avg = (group: ArenaMemberStat[]) =>
+    group.length === 0 ? 0 : Math.round(group.reduce((s, m) => s + m.reading_pct, 0) / group.length)
+
+  const teamA = stats.filter(m => m.team === 'a')
+  const teamB = stats.filter(m => m.team === 'b')
+
+  const result: ArenaStanding[] = []
+  if (teamA.length > 0)
+    result.push({ team: 'a', avg_reading_pct: avg(teamA), avg_reading_pct_week: avg(teamA), member_count: teamA.length })
+  if (teamB.length > 0)
+    result.push({ team: 'b', avg_reading_pct: avg(teamB), avg_reading_pct_week: avg(teamB), member_count: teamB.length })
+
+  // Group arena (no teams): single entry
+  if (result.length === 0) {
+    result.push({ team: 'all', avg_reading_pct: avg(stats), avg_reading_pct_week: avg(stats), member_count: stats.length })
+  }
+  return result
 }
 
 export async function getGroupArenaLeaderboard(
   arenaId: string
 ): Promise<GroupArenaLeaderboardEntry[]> {
-  const { data, error } = await supabase.rpc('get_group_arena_leaderboard', {
-    arena_id_param: arenaId,
+  const ctx = await _arenaContext(arenaId)
+  if (!ctx) return []
+
+  const entries: GroupArenaLeaderboardEntry[] = ctx.members.map((m: any) => {
+    const ml = ctx.logs.filter((l: any) => l.user_id === m.user_id)
+    const readingDays = ml.filter((l: any) => l.quran_reading).length
+    const fastingDays = ml.filter((l: any) => l.fasting).length
+    const qiyamDays = ml.filter((l: any) => l.qiyam).length
+    return {
+      user_id: m.user_id,
+      username: (m.profiles as any)?.username ?? 'Unknown',
+      total_points: readingDays + fastingDays + qiyamDays,
+      reading_days: readingDays,
+      fasting_days: fastingDays,
+      qiyam_days: qiyamDays,
+      reading_pct: Math.round((readingDays / ctx.totalDays) * 100),
+      rank: 0,
+    }
   })
-  if (error) throw error
-  return (data ?? []) as GroupArenaLeaderboardEntry[]
+
+  entries.sort((a, b) => b.total_points - a.total_points)
+  entries.forEach((e, i) => { e.rank = i + 1 })
+  return entries
 }
 
 // ─── Chat ────────────────────────────────────────────────────────────────────
@@ -163,7 +240,7 @@ export async function getGroupArenaLeaderboard(
 export async function getArenaMessages(arenaId: string): Promise<ArenaMessage[]> {
   const { data, error } = await supabase
     .from('arena_messages')
-    .select('*, profiles:user_id(username)')
+    .select('*, profiles:user_id(username), reactions:arena_message_reactions(id, user_id, emoji)')
     .eq('arena_id', arenaId)
     .order('created_at', { ascending: true })
     .limit(100)

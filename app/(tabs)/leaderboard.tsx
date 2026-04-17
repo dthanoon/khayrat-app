@@ -20,6 +20,7 @@ const TABS: { key: LeaderboardSort; label: string; icon: string }[] = [
   { key: 'total_points', label: 'Points', icon: '⭐' },
   { key: 'reading_consistency_pct', label: 'Quran', icon: '📖' },
   { key: 'fasting_consistency_pct', label: 'Fasting', icon: '🌙' },
+  { key: 'qiyam_consistency_pct', label: 'Qiyam', icon: '🌟' },
 ]
 
 const GENDERS = [
@@ -40,12 +41,12 @@ export default function LeaderboardScreen() {
   return (
     <View style={styles.container}>
       {/* Sort tabs */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.tabsScroll}
-        contentContainerStyle={styles.tabs}
-      >
+      <View style={styles.tabsScroll}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tabs}
+        >
         {TABS.map(tab => (
           <TouchableOpacity
             key={tab.key}
@@ -59,7 +60,8 @@ export default function LeaderboardScreen() {
             </Text>
           </TouchableOpacity>
         ))}
-      </ScrollView>
+        </ScrollView>
+      </View>
 
       {/* Filter button */}
       <View style={styles.filterRow}>
@@ -149,21 +151,25 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
 
   tabsScroll: {
+    height: 54,
+    justifyContent: 'center',
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
   tabs: {
     flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: spacing.lg,
-    gap: spacing.sm,
     paddingVertical: spacing.sm,
+    gap: spacing.sm,
   },
   tab: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    height: 36,
     borderRadius: radius.full,
     backgroundColor: colors.bgCard,
     borderWidth: 1,
@@ -173,11 +179,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.emeraldDim,
     borderColor: colors.emerald,
   },
-  tabEmoji: { fontSize: 14 },
+  tabEmoji: { fontSize: 13, lineHeight: 18 },
   tabLabel: {
     fontSize: fontSize.sm,
     fontWeight: fontWeight.medium,
     color: colors.textSecondary,
+    lineHeight: 18,
   },
   tabLabelActive: { color: colors.emeraldLight },
 

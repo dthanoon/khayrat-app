@@ -185,6 +185,7 @@ export function useArenaChat(arenaId: string) {
           const newMsg: ArenaMessage = {
             ...(payload.new as ArenaMessage),
             profiles: profile ?? { username: 'Unknown' },
+            reactions: [],
           }
 
           if (active) {
@@ -218,7 +219,20 @@ export function useArenaChat(arenaId: string) {
   const react = useCallback(
     async (messageId: string, emoji: string) => {
       if (!userId) return
-      await toggleReaction(messageId, userId, emoji)
+      const result = await toggleReaction(messageId, userId, emoji)
+      // Optimistic local update so the UI reacts immediately
+      setMessages(prev =>
+        prev.map(msg => {
+          if (msg.id !== messageId) return msg
+          const reactions = [...(msg.reactions ?? [])]
+          if (result === 'added') {
+            const newReaction = { id: `tmp-${Date.now()}`, message_id: messageId, user_id: userId, emoji }
+            return { ...msg, reactions: [...reactions, newReaction] }
+          } else {
+            return { ...msg, reactions: reactions.filter(r => !(r.user_id === userId && r.emoji === emoji)) }
+          }
+        })
+      )
     },
     [userId]
   )

@@ -3,9 +3,10 @@ import {
   getLeaderboard,
   getUserStatsAndRank,
   getUserStreak,
+  getAllComparativeRanks,
 } from '../services/leaderboard'
 import { useStore } from '../store/useStore'
-import type { LeaderboardEntry, LeaderboardSort, LeaderboardFilters, PersonalStatsData } from '../types'
+import type { LeaderboardEntry, LeaderboardSort, LeaderboardFilters, PersonalStatsData, AllComparativeRanks } from '../types'
 
 export function useLeaderboard(sort: LeaderboardSort = 'consistency_pct') {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([])
@@ -49,6 +50,7 @@ export function usePersonalStats() {
   const userId = session?.user.id
 
   const [stats, setStats] = useState<PersonalStatsData | null>(null)
+  const [allComparativeRanks, setAllComparativeRanks] = useState<AllComparativeRanks | null>(null)
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
@@ -71,7 +73,18 @@ export function usePersonalStats() {
           days_since_joining: statsResult.stats.days_since_joining,
           total_points: statsResult.stats.total_points,
           rank: statsResult.rank,
+          gender: statsResult.stats.gender,
+          country: statsResult.stats.country,
         })
+
+        // Fetch all comparative ranks in a single query
+        getAllComparativeRanks(
+          userId,
+          statsResult.stats.gender,
+          statsResult.stats.country
+        )
+          .then(r => { if (r) setAllComparativeRanks(r) })
+          .catch(() => {}) // non-fatal — comparison section just won't show
       }
     } catch (e) {
       console.error('Personal stats error', e)
@@ -84,5 +97,5 @@ export function usePersonalStats() {
     load()
   }, [load])
 
-  return { stats, loading, reload: load }
+  return { stats, allComparativeRanks, loading, reload: load }
 }
