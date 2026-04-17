@@ -258,6 +258,19 @@ export default function SettingsScreen() {
           />
         </Card>
 
+        {/* Legal */}
+        <Card style={styles.section}>
+          <Text style={styles.sectionTitle}>Legal</Text>
+          <TouchableOpacity
+            style={styles.legalRow}
+            onPress={() => router.push('/privacy')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.legalText}>Privacy Policy</Text>
+            <Text style={styles.legalChevron}>›</Text>
+          </TouchableOpacity>
+        </Card>
+
         <View style={{ height: spacing.xxl }} />
       </ScrollView>
     </KeyboardAvoidingView>
@@ -309,4 +322,19 @@ const styles = StyleSheet.create({
   countryChipActive: { borderColor: colors.emerald, backgroundColor: colors.emeraldDim },
   countryChipText: { fontSize: fontSize.sm, color: colors.textMuted },
   countryChipTextActive: { color: colors.emeraldLight },
+  legalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.sm,
+  },
+  legalText: {
+    fontSize: fontSize.md,
+    color: colors.textSecondary,
+  },
+  legalChevron: {
+    fontSize: 22,
+    color: colors.textMuted,
+    lineHeight: 26,
+  },
 })
