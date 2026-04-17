@@ -24,7 +24,7 @@ export default function PrivacyPolicyScreen() {
       >
         <Text style={styles.label}>Legal</Text>
         <Text style={styles.pageTitle}>Privacy Policy</Text>
-        <Text style={styles.meta}>Last updated: April 17, 2025</Text>
+        <Text style={styles.meta}>Last updated: April 17, 2026</Text>
 
         <Section title="1. Introduction">
           <P>

@@ -140,6 +140,14 @@ export default function RootLayout() {
           name="settings"
           options={{ title: 'Settings', headerBackTitle: 'Back' }}
         />
+        <Stack.Screen
+          name="privacy"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="terms"
+          options={{ headerShown: false }}
+        />
       </Stack>
       <ToastOverlay />
     </AuthGate>

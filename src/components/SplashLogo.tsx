@@ -2,10 +2,10 @@ import React, { useEffect, useRef } from 'react'
 import { View, Text, StyleSheet, Animated, ScrollView } from 'react-native'
 
 // ─── Set true to see all 3 logos on screen at once (for picking) ─────────────
-export const PREVIEW_ALL = true
+export const PREVIEW_ALL = false
 
 // ─── Change this to 1, 2, or 3 once you've picked ────────────────────────────
-export const ACTIVE_LOGO_VARIANT: 1 | 2 | 3 = 1
+export const ACTIVE_LOGO_VARIANT: 1 | 2 | 3 = 2
 
 // ─── Option 1: Crescent & Stars ───────────────────────────────────────────────
 function CrescentLogo() {

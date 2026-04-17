@@ -7,6 +7,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
+  Alert,
 } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Input } from '../src/components/ui/Input'
@@ -15,6 +16,7 @@ import { Card } from '../src/components/ui/Card'
 import { useAuth } from '../src/hooks/useAuth'
 import { useStore } from '../src/store/useStore'
 import { upsertProfile, updatePassword } from '../src/services/profiles'
+import { supabase } from '../src/services/supabase'
 import { colors, spacing, fontSize, fontWeight, radius } from '../src/constants/theme'
 
 const COUNTRIES = [
@@ -27,8 +29,9 @@ const COUNTRIES = [
 
 export default function SettingsScreen() {
   const router = useRouter()
-  const { profile, userId, setProfile: updateStoreProfile } = useAuth()
+  const { profile, userId, signOut } = useAuth()
   const { showToast } = useStore()
+  const [deletingAccount, setDeletingAccount] = useState(false)
 
   // Profile fields
   const [username, setUsername] = useState(profile?.username ?? '')
@@ -116,6 +119,35 @@ export default function SettingsScreen() {
     } finally {
       setSavingPassword(false)
     }
+  }
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'This will permanently delete your account and all your data (logs, arena history, profile). This cannot be undone.\n\nAre you absolutely sure?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete My Account',
+          style: 'destructive',
+          onPress: async () => {
+            if (!userId) return
+            setDeletingAccount(true)
+            try {
+              await supabase.from('daily_logs').delete().eq('user_id', userId)
+              await supabase.from('arena_members').delete().eq('user_id', userId)
+              await supabase.from('profiles').delete().eq('id', userId)
+              await signOut()
+              showToast('Account deleted. Auth data removed within 30 days.', 'info')
+            } catch {
+              showToast('Failed to delete account. Contact support.', 'error')
+            } finally {
+              setDeletingAccount(false)
+            }
+          },
+        },
+      ]
+    )
   }
 
   return (
@@ -269,6 +301,32 @@ export default function SettingsScreen() {
             <Text style={styles.legalText}>Privacy Policy</Text>
             <Text style={styles.legalChevron}>›</Text>
           </TouchableOpacity>
+          <View style={styles.legalDivider} />
+          <TouchableOpacity
+            style={styles.legalRow}
+            onPress={() => router.push('/terms')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.legalText}>Terms of Service</Text>
+            <Text style={styles.legalChevron}>›</Text>
+          </TouchableOpacity>
+        </Card>
+
+        {/* Danger zone */}
+        <Card style={styles.section}>
+          <Text style={[styles.sectionTitle, styles.dangerTitle]}>Account</Text>
+          <Text style={styles.dangerDescription}>
+            Deleting your account is permanent and cannot be undone. All your logs, stats,
+            and arena history will be removed within 30 days.
+          </Text>
+          <Button
+            title={deletingAccount ? 'Deleting…' : 'Delete Account'}
+            onPress={handleDeleteAccount}
+            loading={deletingAccount}
+            variant="secondary"
+            fullWidth
+            style={styles.deleteBtn}
+          />
         </Card>
 
         <View style={{ height: spacing.xxl }} />
@@ -336,5 +394,23 @@ const styles = StyleSheet.create({
     fontSize: 22,
     color: colors.textMuted,
     lineHeight: 26,
+  },
+  legalDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: spacing.xs,
+  },
+  dangerTitle: {
+    color: '#ef4444',
+    borderBottomColor: '#ef444422',
+  },
+  dangerDescription: {
+    fontSize: fontSize.sm,
+    color: colors.textMuted,
+    lineHeight: 20,
+  },
+  deleteBtn: {
+    borderColor: '#ef4444',
+    marginTop: spacing.sm,
   },
 })

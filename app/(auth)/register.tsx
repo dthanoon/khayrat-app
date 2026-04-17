@@ -7,6 +7,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
+  Linking,
 } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Input } from '../../src/components/ui/Input'
@@ -257,6 +258,18 @@ export default function RegisterScreen() {
               </ScrollView>
             </View>
 
+            <Text style={styles.legalConsent}>
+              By creating an account you agree to our{' '}
+              <Text style={styles.legalLink} onPress={() => router.push('/terms')}>
+                Terms of Service
+              </Text>
+              {' '}and{' '}
+              <Text style={styles.legalLink} onPress={() => router.push('/privacy')}>
+                Privacy Policy
+              </Text>
+              .
+            </Text>
+
             <Button
               title="Create Account"
               onPress={handleStep2}
@@ -354,4 +367,15 @@ const styles = StyleSheet.create({
     color: colors.error,
   },
   actionBtn: { marginTop: spacing.sm },
+  legalConsent: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 18,
+    marginTop: spacing.sm,
+  },
+  legalLink: {
+    color: colors.emerald,
+    fontWeight: '600',
+  },
 })
