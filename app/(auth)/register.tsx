@@ -66,7 +66,6 @@ export default function RegisterScreen() {
     if (!username.trim()) e.username = 'Username is required'
     else if (username.trim().length < 3) e.username = 'At least 3 characters'
     else if (!/^[a-zA-Z0-9_]+$/.test(username)) e.username = 'Letters, numbers and _ only'
-    if (!gender) e.gender = 'Please select a gender'
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -90,6 +89,20 @@ export default function RegisterScreen() {
     if (!validateStep2() || !createdUserId) return
     setLoading(true)
     try {
+      // Sign in FIRST so auth.uid() is set — required for RLS to allow profile upsert
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      })
+
+      if (signInError?.message?.toLowerCase().includes('email')) {
+        showToast('Check your email to confirm your account, then sign in.', 'success')
+        router.replace('/(auth)/login')
+        return
+      }
+      if (signInError) throw new Error(signInError.message)
+
+      // Now authenticated — upsert profile
       await upsertProfile(createdUserId, {
         username: username.trim().toLowerCase(),
         first_name: firstName.trim() || null,
@@ -98,19 +111,6 @@ export default function RegisterScreen() {
         gender: gender || null,
         country: country || null,
       })
-
-      // Try to sign in — works when email confirmation is disabled in Supabase
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
-        password,
-      })
-
-      if (signInError?.message?.toLowerCase().includes('email')) {
-        showToast('Account created! Check your email to confirm before signing in.', 'success')
-        router.replace('/(auth)/login')
-        return
-      }
-      if (signInError) throw new Error(signInError.message)
 
       router.replace('/(tabs)')
     } catch (e: unknown) {
@@ -200,13 +200,13 @@ export default function RegisterScreen() {
               onChangeText={setUsername}
               autoCapitalize="none"
               placeholder="e.g. Abdullah123"
-              hint="Lowercase, letters, numbers, underscores"
+              hint="Letters, numbers and _ only"
               error={errors.username}
             />
             <View style={styles.row}>
               <View style={styles.half}>
                 <Input
-                  label="First Name"
+                  label="First Name (optional)"
                   value={firstName}
                   onChangeText={setFirstName}
                   autoCapitalize="words"
@@ -215,7 +215,7 @@ export default function RegisterScreen() {
               </View>
               <View style={styles.half}>
                 <Input
-                  label="Last Name"
+                  label="Last Name (optional)"
                   value={lastName}
                   onChangeText={setLastName}
                   autoCapitalize="words"
@@ -224,21 +224,20 @@ export default function RegisterScreen() {
               </View>
             </View>
             <Input
-              label="Age"
+              label="Year of Birth (optional)"
               value={age}
               onChangeText={setAge}
               keyboardType="number-pad"
-              placeholder="Optional"
+              placeholder="e.g. 1995"
             />
 
             {/* Gender */}
             <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Gender *</Text>
+              <Text style={styles.fieldLabel}>Gender (optional)</Text>
               <View style={styles.genderRow}>
                 <GenderBtn value="male" label="Male" />
                 <GenderBtn value="female" label="Female" />
               </View>
-              {errors.gender && <Text style={styles.errorText}>{errors.gender}</Text>}
             </View>
 
             {/* Country */}
