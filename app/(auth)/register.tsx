@@ -89,15 +89,18 @@ export default function RegisterScreen() {
     if (!validateStep2() || !createdUserId) return
     setLoading(true)
     try {
-      // Sign in FIRST so auth.uid() is set — required for RLS to allow profile upsert
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
-        password,
-      })
+      // signUp already set a session when email confirmation is disabled.
+      // Only sign in manually if no session exists yet.
+      const { data: { session: existing } } = await supabase.auth.getSession()
+      if (!existing) {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: email.trim().toLowerCase(),
+          password,
+        })
+        if (signInError) throw new Error(signInError.message)
+      }
 
-      if (signInError) throw new Error(signInError.message)
-
-      // Now authenticated — upsert profile
+      // Authenticated — upsert profile
       await upsertProfile(createdUserId, {
         username: username.trim().toLowerCase(),
         first_name: firstName.trim() || null,
