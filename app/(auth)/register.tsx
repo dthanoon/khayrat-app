@@ -79,7 +79,7 @@ export default function RegisterScreen() {
       setCreatedUserId(userId)
       setStep('profile')
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Registration failed'
+      const msg = (e as any)?.message ?? 'Registration failed'
       showToast(msg, 'error')
     } finally {
       setLoading(false)
@@ -99,16 +99,22 @@ export default function RegisterScreen() {
         country: country || null,
       })
 
-      // Sign in now
-      const { error } = await supabase.auth.signInWithPassword({
+      // Try to sign in — works when email confirmation is disabled in Supabase
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password,
       })
-      if (error) throw error
+
+      if (signInError?.message?.toLowerCase().includes('email')) {
+        showToast('Account created! Check your email to confirm before signing in.', 'success')
+        router.replace('/(auth)/login')
+        return
+      }
+      if (signInError) throw new Error(signInError.message)
 
       router.replace('/(tabs)')
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Profile setup failed'
+      const msg = (e as any)?.message ?? 'Profile setup failed'
       showToast(msg, 'error')
     } finally {
       setLoading(false)
