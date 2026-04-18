@@ -95,11 +95,6 @@ export default function RegisterScreen() {
         password,
       })
 
-      if (signInError?.message?.toLowerCase().includes('email')) {
-        showToast('Check your email to confirm your account, then sign in.', 'success')
-        router.replace('/(auth)/login')
-        return
-      }
       if (signInError) throw new Error(signInError.message)
 
       // Now authenticated — upsert profile
