@@ -49,6 +49,7 @@ export default function RegisterScreen() {
 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [createdUserId, setCreatedUserId] = useState<string | null>(null)
+  const [sessionReady, setSessionReady] = useState(false)
 
   const validateStep1 = () => {
     const e: Record<string, string> = {}
@@ -74,8 +75,9 @@ export default function RegisterScreen() {
     if (!validateStep1()) return
     setLoading(true)
     try {
-      const userId = await registerUser(email.trim().toLowerCase(), password)
+      const { userId, sessionReady: ready } = await registerUser(email.trim().toLowerCase(), password)
       setCreatedUserId(userId)
+      setSessionReady(ready)
       setStep('profile')
     } catch (e: unknown) {
       const msg = (e as any)?.message ?? 'Registration failed'
@@ -89,18 +91,14 @@ export default function RegisterScreen() {
     if (!validateStep2() || !createdUserId) return
     setLoading(true)
     try {
-      // signUp already set a session when email confirmation is disabled.
-      // Only sign in manually if no session exists yet.
-      const { data: { session: existing } } = await supabase.auth.getSession()
-      if (!existing) {
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: email.trim().toLowerCase(),
-          password,
-        })
-        if (signInError) throw new Error(signInError.message)
+      // If signUp didn't create a session, email confirmation is still required in Supabase
+      if (!sessionReady) {
+        showToast('Account created! Check your email to confirm, then sign in.', 'success')
+        router.replace('/(auth)/login')
+        return
       }
 
-      // Authenticated — upsert profile
+      // Session already active from signUp — upsert profile
       await upsertProfile(createdUserId, {
         username: username.trim().toLowerCase(),
         first_name: firstName.trim() || null,

@@ -4,11 +4,11 @@ import type { Profile } from '../types'
 const API_BASE = process.env.EXPO_PUBLIC_API_BASE_URL ?? ''
 
 /** Register a new user directly via Supabase auth */
-export async function registerUser(email: string, password: string): Promise<string> {
+export async function registerUser(email: string, password: string): Promise<{ userId: string; sessionReady: boolean }> {
   const { data, error } = await supabase.auth.signUp({ email, password })
   if (error) throw new Error(error.message)
   if (!data.user) throw new Error('Registration failed — please try again')
-  return data.user.id
+  return { userId: data.user.id, sessionReady: !!data.session }
 }
 
 /** Upsert the user's profile (step 2 of registration or settings update) */
