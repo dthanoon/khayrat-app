@@ -21,7 +21,8 @@
         "gradleCommand": ":app:bundleRelease"
       },
       "ios": {
-        "buildConfiguration": "Release"
+        "buildConfiguration": "Release",
+        "image": "latest"
       }
     }
   },
