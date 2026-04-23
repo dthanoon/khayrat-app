@@ -16,12 +16,17 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.khayrat.app",
       "deploymentTarget": "14.0",
+      "entitlements": {
+        "com.apple.security.application-groups": ["group.com.khayrat.app"]
+      },
       "infoPlist": {
         "NSCameraUsageDescription": "Used for profile photo",
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": false,
           "NSAllowsLocalNetworking": true
-        }
+        },
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIBackgroundModes": ["remote-notification"]
       }
     },
     "android": {
@@ -41,6 +46,13 @@
       "expo-router",
       "expo-secure-store",
       [
+        "expo-notifications",
+        {
+          "color": "#10b981",
+          "iosDisplayInForeground": true
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "backgroundColor": "#0a0a0a",
@@ -51,6 +63,14 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "48100733-1110-47e5-bd56-4dab7c44b14f"
+      }
     }
   }
 }

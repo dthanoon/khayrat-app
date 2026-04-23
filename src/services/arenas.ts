@@ -342,6 +342,21 @@ export async function toggleReaction(
   }
 }
 
+// ─── Mention notifications ───────────────────────────────────────────────────
+
+export async function notifyMentions(
+  arenaId: string,
+  messageId: string,
+  content: string,
+  senderUsername: string,
+  senderUserId: string
+): Promise<void> {
+  if (!/@\w+/.test(content)) return
+  await supabase.functions.invoke('notify-mentions', {
+    body: { arena_id: arenaId, message_id: messageId, content, sender_username: senderUsername, sender_user_id: senderUserId },
+  })
+}
+
 // ─── Notifications ────────────────────────────────────────────────────────────
 
 export async function getUnreadNotifications(

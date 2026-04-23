@@ -10,6 +10,7 @@ import {
   getGroupArenaLeaderboard,
   getArenaMessages,
   sendArenaMessage,
+  notifyMentions,
   toggleReaction,
   getUnreadNotifications,
   markNotificationsRead,
@@ -160,8 +161,9 @@ export function useArenaDetail(arenaId: string) {
 }
 
 export function useArenaChat(arenaId: string) {
-  const { session } = useStore()
+  const { session, profile } = useStore()
   const userId = session?.user.id
+  const username = profile?.username
 
   const [messages, setMessages] = useState<ArenaMessage[]>([])
   const [loading, setLoading] = useState(true)
@@ -217,14 +219,18 @@ export function useArenaChat(arenaId: string) {
       if (!userId || !content.trim()) return
       setSending(true)
       try {
-        await sendArenaMessage(arenaId, userId, content.trim())
+        const msg = await sendArenaMessage(arenaId, userId, content.trim())
+        // Fire-and-forget: notify any @mentioned arena members
+        if (username) {
+          notifyMentions(arenaId, msg.id, content.trim(), username, userId).catch(() => {})
+        }
       } catch (e) {
         console.error('Send message error', e)
       } finally {
         setSending(false)
       }
     },
-    [arenaId, userId]
+    [arenaId, userId, username]
   )
 
   const react = useCallback(

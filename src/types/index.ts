@@ -9,6 +9,7 @@ export interface Profile {
   city: string | null
   is_admin: boolean
   created_at: string
+  push_token?: string | null
 }
 
 export interface DailyLog {

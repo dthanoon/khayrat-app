@@ -4,8 +4,10 @@ import { View, Text, StyleSheet, Animated, Pressable } from 'react-native'
 import { Stack, useRouter, useSegments } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import * as SplashScreen from 'expo-splash-screen'
+import * as Notifications from 'expo-notifications'
 import { supabase } from '../src/services/supabase'
 import { getProfile } from '../src/services/profiles'
+import { registerForPushNotifications } from '../src/services/notifications'
 import { useStore } from '../src/store/useStore'
 import { colors } from '../src/constants/theme'
 import { AppSplashScreen } from '../src/components/SplashLogo'
@@ -57,6 +59,17 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const splashOpacity = useRef(new Animated.Value(1)).current
 
+  // Open arena when user taps a mention notification
+  useEffect(() => {
+    const sub = Notifications.addNotificationResponseReceivedListener((response: Notifications.NotificationResponse) => {
+      const data = response.notification.request.content.data as { type?: string; arena_id?: string }
+      if (data?.type === 'mention' && data?.arena_id) {
+        router.push(`/arena/${data.arena_id}` as any)
+      }
+    })
+    return () => sub.remove()
+  }, [])
+
   useEffect(() => {
     // Hide native splash immediately so our custom screen shows
     SplashScreen.hideAsync()
@@ -66,6 +79,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       if (session?.user.id) {
         const profile = await getProfile(session.user.id).catch(() => null)
         setProfile(profile)
+        registerForPushNotifications(session.user.id).catch(() => {})
       }
       // Fade out custom splash, then mark auth done
       Animated.timing(splashOpacity, {
