@@ -88,3 +88,6 @@ target 'Khayrat' do
     end
   end
 end
+
+target 'KhayratWidgetExtension' do
+end
