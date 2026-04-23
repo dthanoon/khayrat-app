@@ -22,7 +22,7 @@
       },
       "ios": {
         "buildConfiguration": "Release",
-        "image": "latest"
+        "image": "macos-sequoia-15.2-xcode-16.2"
       }
     }
   },
