@@ -21,6 +21,8 @@
 		B18059E884C0ABDD17F3DC3D /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAC715A2D49A985799AEE119 /* ExpoModulesProvider.swift */; };
 		B6708E6F02FC4EE4B87C131A /* noop-file.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CE0467224E74859B8828916 /* noop-file.swift */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
+		5A1A8AB22F99F001002E926F /* KhayratWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1A8AB02F99F001002E926F /* KhayratWidget.swift */; };
+		5A1A8AB32F99F001002E926F /* KhayratWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1A8AB12F99F001002E926F /* KhayratWidgetBundle.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -70,11 +72,19 @@
 		DD907268D7844F088AAE7F61 /* Khayrat-Bridging-Header.h */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.h; name = "Khayrat-Bridging-Header.h"; path = "Khayrat/Khayrat-Bridging-Header.h"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		FAC715A2D49A985799AEE119 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-Khayrat/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		5A1A8AB02F99F001002E926F /* KhayratWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = KhayratWidget.swift; path = KhayratWidget/KhayratWidget.swift; sourceTree = "<group>"; };
+		5A1A8AB12F99F001002E926F /* KhayratWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = KhayratWidgetBundle.swift; path = KhayratWidget/KhayratWidgetBundle.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedRootGroup section */
-		5A1A8A8C2F99E0A9002E926F /* KhayratWidget */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = KhayratWidget; sourceTree = "<group>"; };
-/* End PBXFileSystemSynchronizedRootGroup section */
+		5A1A8A8C2F99E0A9002E926F /* KhayratWidget */ = {
+			isa = PBXGroup;
+			children = (
+				5A1A8AB02F99F001002E926F /* KhayratWidget.swift */,
+				5A1A8AB12F99F001002E926F /* KhayratWidgetBundle.swift */,
+			);
+			path = KhayratWidget;
+			sourceTree = "<group>";
+		};
 
 /* Begin PBXFrameworksBuildPhase section */
 		13B07F8C1A680F5B00A75B9A /* Frameworks */ = {
@@ -232,9 +242,6 @@
 			buildRules = (
 			);
 			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				5A1A8A8C2F99E0A9002E926F /* KhayratWidget */,
 			);
 			name = KhayratWidgetExtension;
 			packageProductDependencies = (
@@ -427,6 +434,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5A1A8AB22F99F001002E926F /* KhayratWidget.swift in Sources */,
+				5A1A8AB32F99F001002E926F /* KhayratWidgetBundle.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
