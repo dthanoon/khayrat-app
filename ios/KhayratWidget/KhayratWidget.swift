@@ -58,7 +58,7 @@ struct LogProvider: TimelineProvider {
 
 func upsertLog(_ data: WidgetLogData) {
     guard data.isAuthenticated,
-          let url = URL(string: "\(data.supabaseUrl)/rest/v1/daily_logs") else { return }
+          let url = URL(string: "\(data.supabaseUrl)/rest/v1/daily_logs?on_conflict=user_id,log_date") else { return }
 
     let today = data.date.isEmpty ? isoToday() : data.date
     let body: [String: Any] = [

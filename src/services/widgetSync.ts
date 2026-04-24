@@ -22,3 +22,25 @@ export function syncWidgetData(data: WidgetSyncData): void {
     // Widget sync is best-effort; never crash the main app
   }
 }
+
+/** Refresh only the auth token in widget storage — called on TOKEN_REFRESHED so the widget
+ *  always has a valid token without overwriting the log values it stored itself. */
+export function syncWidgetAuthToken(
+  userId: string,
+  accessToken: string,
+): void {
+  if (Platform.OS !== 'ios') return
+  try {
+    const mod = NativeModules.WidgetSyncModule
+    if (mod?.syncAuthToken) {
+      mod.syncAuthToken(
+        userId,
+        accessToken,
+        process.env.EXPO_PUBLIC_SUPABASE_URL ?? '',
+        process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
+      )
+    }
+  } catch {
+    // best-effort
+  }
+}

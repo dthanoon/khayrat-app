@@ -8,6 +8,7 @@ import * as Notifications from 'expo-notifications'
 import { supabase } from '../src/services/supabase'
 import { getProfile } from '../src/services/profiles'
 import { registerForPushNotifications } from '../src/services/notifications'
+import { syncWidgetAuthToken } from '../src/services/widgetSync'
 import { useStore } from '../src/store/useStore'
 import { colors } from '../src/constants/theme'
 import { AppSplashScreen } from '../src/components/SplashLogo'
@@ -94,6 +95,9 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       if (session?.user.id) {
         const profile = await getProfile(session.user.id).catch(() => null)
         setProfile(profile)
+        if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {
+          syncWidgetAuthToken(session.user.id, session.access_token)
+        }
       } else {
         setProfile(null)
       }

@@ -22,5 +22,19 @@ class WidgetSyncModule: NSObject {
     }
   }
 
+  @objc
+  func syncAuthToken(_ userId: String, accessToken: String, supabaseUrl: String, supabaseAnonKey: String) {
+    guard let defaults = UserDefaults(suiteName: "group.com.khayrat.app") else { return }
+    defaults.set(userId,         forKey: "user_id")
+    defaults.set(accessToken,    forKey: "access_token")
+    defaults.set(supabaseUrl,    forKey: "supabase_url")
+    defaults.set(supabaseAnonKey, forKey: "supabase_anon_key")
+    defaults.synchronize()
+
+    if #available(iOS 14.0, *) {
+      WidgetCenter.shared.reloadTimelines(ofKind: "KhayratDailyLogWidget")
+    }
+  }
+
   @objc static func requiresMainQueueSetup() -> Bool { false }
 }
