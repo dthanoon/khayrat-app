@@ -8,6 +8,10 @@ import { colors, spacing, fontSize, fontWeight, radius } from '../constants/them
 const DAY_ABBR = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
+function isFriday(dateStr: string): boolean {
+  return new Date(dateStr + 'T12:00:00').getDay() === 5
+}
+
 function getLast7Days() {
   const result: { date: string; abbr: string; day: number; isToday: boolean }[] = []
   for (let i = 6; i >= 0; i--) {
@@ -78,12 +82,14 @@ export function DailyLogger() {
   const [quran, setQuran] = useState(false)
   const [fasting, setFasting] = useState(false)
   const [qiyam, setQiyam] = useState(false)
+  const [kahf, setKahf] = useState(false)
 
   // Sync checkboxes when the log for the selected date loads
   useEffect(() => {
     setQuran(log?.quran_reading ?? false)
     setFasting(log?.fasting ?? false)
     setQiyam(log?.qiyam ?? false)
+    setKahf(log?.kahf_reading ?? false)
   }, [log])
 
   const handleDateSelect = (date: string) => {
@@ -91,21 +97,24 @@ export function DailyLogger() {
     setQuran(false)
     setFasting(false)
     setQiyam(false)
+    setKahf(false)
     setSelectedDate(date)
   }
 
+  const isFridaySelected = isFriday(selectedDate)
+
   const toggle = (
-    field: 'quran_reading' | 'fasting' | 'qiyam',
+    field: 'quran_reading' | 'fasting' | 'qiyam' | 'kahf_reading',
     current: boolean,
     setter: (v: boolean) => void
   ) => {
     const next = !current
     setter(next)
-    // Immediately save with the new value + current values of the other two fields
     saveLog({
       quran_reading: field === 'quran_reading' ? next : quran,
       fasting: field === 'fasting' ? next : fasting,
       qiyam: field === 'qiyam' ? next : qiyam,
+      kahf_reading: field === 'kahf_reading' ? next : kahf,
     })
   }
 
@@ -123,6 +132,7 @@ export function DailyLogger() {
       <View style={styles.dateStrip}>
         {days.map(d => {
           const isSelected = d.date === selectedDate
+          const dayIsFriday = isFriday(d.date)
           return (
             <TouchableOpacity
               key={d.date}
@@ -131,10 +141,11 @@ export function DailyLogger() {
                 styles.dayBtn,
                 isSelected && styles.dayBtnActive,
                 d.isToday && !isSelected && styles.dayBtnToday,
+                dayIsFriday && !isSelected && styles.dayBtnFriday,
               ]}
               activeOpacity={0.7}
             >
-              <Text style={[styles.dayAbbr, isSelected && styles.dayTextActive]}>{d.abbr}</Text>
+              <Text style={[styles.dayAbbr, isSelected && styles.dayTextActive, dayIsFriday && !isSelected && styles.dayAbbrFriday]}>{d.abbr}</Text>
               <Text style={[
                 styles.dayNum,
                 isSelected && styles.dayTextActive,
@@ -178,6 +189,17 @@ export function DailyLogger() {
             onToggle={() => toggle('qiyam', qiyam, setQiyam)}
             accentColor={colors.purple}
           />
+          {isFridaySelected && (
+            <LogItem
+              icon="reader-outline"
+              label="Kahf Reading"
+              subtitle="Surah Al-Kahf — Friday sunnah"
+              checked={kahf}
+              saving={saving}
+              onToggle={() => toggle('kahf_reading', kahf, setKahf)}
+              accentColor={colors.sky}
+            />
+          )}
         </View>
       )}
     </Card>
@@ -207,7 +229,9 @@ const styles = StyleSheet.create({
   },
   dayBtnActive: { backgroundColor: colors.emeraldDim, borderColor: colors.emerald },
   dayBtnToday: { borderColor: colors.border },
+  dayBtnFriday: { borderColor: colors.skyDim },
   dayAbbr: { fontSize: 10, color: colors.textMuted, fontWeight: fontWeight.medium },
+  dayAbbrFriday: { color: colors.sky },
   dayNum: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textSecondary },
   dayNumToday: { color: colors.emerald },
   dayTextActive: { color: colors.emeraldLight },

@@ -8,6 +8,7 @@ export interface WidgetSyncData {
   quranReading: boolean
   fasting: boolean
   qiyam: boolean
+  kahfReading: boolean
   date: string
 }
 

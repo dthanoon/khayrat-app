@@ -20,6 +20,7 @@ export function useDailyLog(date?: string) {
       quranReading: log.quran_reading,
       fasting: log.fasting,
       qiyam: log.qiyam,
+      kahfReading: log.kahf_reading,
       date: log.log_date,
     })
   }, [userId, session?.access_token])
@@ -51,6 +52,7 @@ export function useDailyLog(date?: string) {
       quran_reading?: boolean
       fasting?: boolean
       qiyam?: boolean
+      kahf_reading?: boolean
     }) => {
       if (!userId) return
 
@@ -58,12 +60,14 @@ export function useDailyLog(date?: string) {
         quran_reading: false,
         fasting: false,
         qiyam: false,
+        kahf_reading: false,
       }
 
       const payload = {
         quran_reading: updates.quran_reading ?? current.quran_reading,
         fasting: updates.fasting ?? current.fasting,
         qiyam: updates.qiyam ?? current.qiyam,
+        kahf_reading: updates.kahf_reading ?? current.kahf_reading,
         log_date: targetDate,
       }
 

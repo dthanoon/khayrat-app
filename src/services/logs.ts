@@ -6,6 +6,7 @@ export interface UpsertLogPayload {
   quran_reading?: boolean
   fasting?: boolean
   qiyam?: boolean
+  kahf_reading?: boolean
   log_date?: string
 }
 
@@ -25,6 +26,7 @@ export async function upsertDailyLog(payload: UpsertLogPayload): Promise<DailyLo
         quran_reading: payload.quran_reading ?? false,
         fasting: payload.fasting ?? false,
         qiyam: payload.qiyam ?? false,
+        kahf_reading: payload.kahf_reading ?? false,
       },
       { onConflict: 'user_id,log_date' }
     )

@@ -19,6 +19,7 @@ export interface DailyLog {
   quran_reading: boolean
   fasting: boolean
   qiyam: boolean
+  kahf_reading: boolean
   created_at: string
 }
 
@@ -35,6 +36,7 @@ export interface UserStats {
   reading_points: number
   fasting_points: number
   qiyam_points: number
+  kahf_points: number
   total_points: number
   active_days: number
   days_since_joining: number
