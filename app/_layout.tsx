@@ -75,20 +75,37 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     // Hide native splash immediately so our custom screen shows
     SplashScreen.hideAsync()
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session)
-      if (session?.user.id) {
-        const profile = await getProfile(session.user.id).catch(() => null)
-        setProfile(profile)
-        registerForPushNotifications(session.user.id).catch(() => {})
-      }
-      // Fade out custom splash, then mark auth done
+    let splashDismissed = false
+
+    const dismissSplash = () => {
+      if (splashDismissed) return
+      splashDismissed = true
       Animated.timing(splashOpacity, {
         toValue: 0,
         duration: 500,
         useNativeDriver: true,
       }).start(() => setAuthLoading(false))
-    })
+    }
+
+    // Safety net: if auth init hangs (slow network, AsyncStorage stall on iOS cold start),
+    // dismiss the splash after 8s so the app never freezes on the logo screen.
+    const timeoutId = setTimeout(dismissSplash, 8000)
+
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        clearTimeout(timeoutId)
+        setSession(session)
+        if (session?.user.id) {
+          // Load profile in background — don't block splash dismissal
+          getProfile(session.user.id).then(setProfile).catch(() => {})
+          registerForPushNotifications(session.user.id).catch(() => {})
+        }
+        dismissSplash()
+      })
+      .catch(() => {
+        clearTimeout(timeoutId)
+        dismissSplash()
+      })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setSession(session)
@@ -103,7 +120,10 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       }
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      clearTimeout(timeoutId)
+      subscription.unsubscribe()
+    }
   }, [])
 
   useEffect(() => {
