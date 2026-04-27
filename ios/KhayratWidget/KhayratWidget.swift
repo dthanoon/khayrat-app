@@ -5,32 +5,45 @@ import AppIntents
 let appGroup = "group.com.khayrat.app"
 
 struct WidgetLogData {
-    var quranReading: Bool
-    var fasting: Bool
-    var qiyam: Bool
-    var date: String
-    var accessToken: String
-    var supabaseUrl: String
+    var quranReading:    Bool
+    var fasting:         Bool
+    var qiyam:           Bool
+    var kahfReading:     Bool
+    var date:            String
+    var accessToken:     String
+    var supabaseUrl:     String
     var supabaseAnonKey: String
-    var userId: String
+    var userId:          String
 
     static func load() -> WidgetLogData {
         let d = UserDefaults(suiteName: appGroup)
         return WidgetLogData(
-            quranReading:    d?.bool(forKey: "quran_reading")    ?? false,
-            fasting:         d?.bool(forKey: "fasting")          ?? false,
-            qiyam:           d?.bool(forKey: "qiyam")            ?? false,
-            date:            d?.string(forKey: "log_date")        ?? "",
-            accessToken:     d?.string(forKey: "access_token")   ?? "",
-            supabaseUrl:     d?.string(forKey: "supabase_url")   ?? "",
+            quranReading:    d?.bool(forKey: "quran_reading")       ?? false,
+            fasting:         d?.bool(forKey: "fasting")             ?? false,
+            qiyam:           d?.bool(forKey: "qiyam")               ?? false,
+            kahfReading:     d?.bool(forKey: "kahf_reading")        ?? false,
+            date:            d?.string(forKey: "log_date")          ?? "",
+            accessToken:     d?.string(forKey: "access_token")      ?? "",
+            supabaseUrl:     d?.string(forKey: "supabase_url")      ?? "",
             supabaseAnonKey: d?.string(forKey: "supabase_anon_key") ?? "",
-            userId:          d?.string(forKey: "user_id")        ?? ""
+            userId:          d?.string(forKey: "user_id")           ?? ""
         )
     }
 
     static func save(field: String, value: Bool) {
         let d = UserDefaults(suiteName: appGroup)
         d?.set(value, forKey: field)
+        d?.synchronize()
+    }
+
+    // Wipe all activity booleans and advance the stored date to today.
+    static func resetForNewDay() {
+        let d = UserDefaults(suiteName: appGroup)
+        d?.set(false,      forKey: "quran_reading")
+        d?.set(false,      forKey: "fasting")
+        d?.set(false,      forKey: "qiyam")
+        d?.set(false,      forKey: "kahf_reading")
+        d?.set(isoToday(), forKey: "log_date")
         d?.synchronize()
     }
 
@@ -46,34 +59,70 @@ struct LogProvider: TimelineProvider {
     func placeholder(in context: Context) -> LogEntry {
         LogEntry(date: Date(), data: WidgetLogData.load())
     }
+
     func getSnapshot(in context: Context, completion: @escaping (LogEntry) -> Void) {
         completion(LogEntry(date: Date(), data: WidgetLogData.load()))
     }
+
     func getTimeline(in context: Context, completion: @escaping (Timeline<LogEntry>) -> Void) {
-        let entry = LogEntry(date: Date(), data: WidgetLogData.load())
-        let next = Calendar.current.date(byAdding: .minute, value: 30, to: Date())!
-        completion(Timeline(entries: [entry], policy: .after(next)))
+        var data = WidgetLogData.load()
+        let today = isoToday()
+
+        // Day has rolled over — reset cached booleans so stale ticks don't show
+        if !data.date.isEmpty && data.date != today {
+            WidgetLogData.resetForNewDay()
+            data.quranReading = false
+            data.fasting      = false
+            data.qiyam        = false
+            data.kahfReading  = false
+            data.date         = today
+        }
+
+        let cal = Calendar.current
+        let midnight = cal.nextDate(
+            after: Date(),
+            matching: DateComponents(hour: 0, minute: 0, second: 0),
+            matchingPolicy: .nextTime
+        )!
+
+        // Current entry with live data
+        let currentEntry = LogEntry(date: Date(), data: data)
+
+        // Midnight entry with blank state so the widget visually resets at day boundary
+        var resetData          = data
+        resetData.quranReading = false
+        resetData.fasting      = false
+        resetData.qiyam        = false
+        resetData.kahfReading  = false
+        let midnightEntry = LogEntry(date: midnight, data: resetData)
+
+        // Ask iOS to call getTimeline again 1 min after midnight so the new day loads cleanly
+        let afterMidnight = cal.date(byAdding: .minute, value: 1, to: midnight)!
+        completion(Timeline(entries: [currentEntry, midnightEntry], policy: .after(afterMidnight)))
     }
 }
 
+// Always writes today's actual date — never relies on the cached date in UserDefaults,
+// which prevents a stale rollover bug from writing into yesterday's DB row.
 func upsertLog(_ data: WidgetLogData) {
     guard data.isAuthenticated,
-          let url = URL(string: "\(data.supabaseUrl)/rest/v1/daily_logs?on_conflict=user_id,log_date") else { return }
+          let url = URL(string: "\(data.supabaseUrl)/rest/v1/daily_logs?on_conflict=user_id,log_date")
+    else { return }
 
-    let today = data.date.isEmpty ? isoToday() : data.date
     let body: [String: Any] = [
-        "user_id": data.userId,
-        "log_date": today,
+        "user_id":       data.userId,
+        "log_date":      isoToday(),
         "quran_reading": data.quranReading,
-        "fasting": data.fasting,
-        "qiyam": data.qiyam,
+        "fasting":       data.fasting,
+        "qiyam":         data.qiyam,
+        "kahf_reading":  data.kahfReading,
     ]
 
     var req = URLRequest(url: url)
     req.httpMethod = "POST"
-    req.setValue(data.supabaseAnonKey, forHTTPHeaderField: "apikey")
-    req.setValue("Bearer \(data.accessToken)", forHTTPHeaderField: "Authorization")
-    req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    req.setValue(data.supabaseAnonKey,          forHTTPHeaderField: "apikey")
+    req.setValue("Bearer \(data.accessToken)",  forHTTPHeaderField: "Authorization")
+    req.setValue("application/json",            forHTTPHeaderField: "Content-Type")
     req.setValue("resolution=merge-duplicates", forHTTPHeaderField: "Prefer")
     req.httpBody = try? JSONSerialization.data(withJSONObject: body)
     URLSession.shared.dataTask(with: req).resume()
@@ -83,6 +132,11 @@ func isoToday() -> String {
     let f = DateFormatter()
     f.dateFormat = "yyyy-MM-dd"
     return f.string(from: Date())
+}
+
+// weekday: 1 = Sunday … 6 = Friday
+func isFriday() -> Bool {
+    Calendar.current.component(.weekday, from: Date()) == 6
 }
 
 @available(iOS 17.0, *)
@@ -121,9 +175,21 @@ struct ToggleQiyamIntent: AppIntent {
     }
 }
 
+@available(iOS 17.0, *)
+struct ToggleKahfIntent: AppIntent {
+    static var title: LocalizedStringResource = "Toggle Kahf Reading"
+    func perform() async throws -> some IntentResult {
+        var data = WidgetLogData.load()
+        data.kahfReading.toggle()
+        WidgetLogData.save(field: "kahf_reading", value: data.kahfReading)
+        upsertLog(data)
+        return .result()
+    }
+}
+
 struct LogRowView: View {
-    let emoji: String
-    let label: String
+    let emoji:   String
+    let label:   String
     let checked: Bool
 
     var body: some View {
@@ -176,7 +242,8 @@ struct KhayratWidgetEntryView: View {
 
     @ViewBuilder
     private var mainView: some View {
-        let data = entry.data
+        let data   = entry.data
+        let friday = isFriday()
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text("🌿 Khayrat")
@@ -200,10 +267,19 @@ struct KhayratWidgetEntryView: View {
                 Button(intent: ToggleQiyamIntent()) {
                     LogRowView(emoji: "⭐", label: "Qiyam", checked: data.qiyam)
                 }.buttonStyle(.plain)
+
+                if friday {
+                    Button(intent: ToggleKahfIntent()) {
+                        LogRowView(emoji: "📗", label: "Kahf", checked: data.kahfReading)
+                    }.buttonStyle(.plain)
+                }
             } else {
                 LogRowView(emoji: "📖", label: "Quran", checked: data.quranReading)
                 LogRowView(emoji: "🌙", label: "Fasting", checked: data.fasting)
                 LogRowView(emoji: "⭐", label: "Qiyam", checked: data.qiyam)
+                if friday {
+                    LogRowView(emoji: "📗", label: "Kahf", checked: data.kahfReading)
+                }
             }
         }
         .padding(12)

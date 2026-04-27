@@ -1,6 +1,8 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { AppState, type AppStateStatus } from 'react-native'
 import { getTodayLog, upsertDailyLog } from '../services/logs'
 import { syncWidgetData } from '../services/widgetSync'
+import { supabase } from '../services/supabase'
 import { useStore } from '../store/useStore'
 import { todayString } from '../utils/date'
 import type { DailyLog } from '../types'
@@ -45,6 +47,39 @@ export function useDailyLog(date?: string) {
 
   useEffect(() => {
     loadLog()
+  }, [loadLog])
+
+  // Real-time: pick up toggles made from the widget or another device/tab
+  useEffect(() => {
+    if (!userId) return
+    const channel = supabase
+      .channel(`daily_logs_${userId}_${targetDate}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'daily_logs', filter: `user_id=eq.${userId}` },
+        (payload) => {
+          const updated = payload.new as DailyLog
+          if (updated?.log_date === targetDate) {
+            setLog(updated)
+            // Only push to widget when viewing today — don't overwrite with a past date
+            if (targetDate === todayString()) pushWidgetSync(updated)
+          }
+        }
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [userId, targetDate, pushWidgetSync])
+
+  // Re-fetch when app comes back to foreground so widget writes are reflected immediately
+  const appState = useRef<AppStateStatus>(AppState.currentState)
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (next: AppStateStatus) => {
+      if (appState.current.match(/inactive|background/) && next === 'active') {
+        loadLog()
+      }
+      appState.current = next
+    })
+    return () => sub.remove()
   }, [loadLog])
 
   const saveLog = useCallback(

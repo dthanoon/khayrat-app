@@ -14,6 +14,7 @@ class WidgetSyncModule: NSObject {
     defaults.set(data["quranReading"]    as? Bool   ?? false, forKey: "quran_reading")
     defaults.set(data["fasting"]         as? Bool   ?? false, forKey: "fasting")
     defaults.set(data["qiyam"]           as? Bool   ?? false, forKey: "qiyam")
+    defaults.set(data["kahfReading"]     as? Bool   ?? false, forKey: "kahf_reading")
     defaults.set(data["date"]            as? String ?? "", forKey: "log_date")
     defaults.synchronize()
 
