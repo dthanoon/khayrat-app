@@ -13,8 +13,14 @@ Deno.serve(async (req) => {
   try {
     const { arena_id, message_id, content, sender_username, sender_user_id } = await req.json()
 
-    // Extract @mentions
-    const mentions: string[] = [...content.matchAll(/@(\w+)/g)].map((m: RegExpMatchArray) => m[1])
+    if (!sender_username || !sender_user_id) {
+      return new Response(JSON.stringify({ sent: 0 }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    // Extract @mentions and normalise to lowercase to match stored usernames
+    const mentions: string[] = [...content.matchAll(/@(\w+)/g)].map((m: RegExpMatchArray) => m[1].toLowerCase())
     if (mentions.length === 0) {
       return new Response(JSON.stringify({ sent: 0 }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

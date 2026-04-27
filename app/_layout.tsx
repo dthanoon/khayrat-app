@@ -112,6 +112,9 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       if (session?.user.id) {
         const profile = await getProfile(session.user.id).catch(() => null)
         setProfile(profile)
+        if (event === 'SIGNED_IN') {
+          registerForPushNotifications(session.user.id).catch(() => {})
+        }
         if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {
           syncWidgetAuthToken(session.user.id, session.access_token)
         }

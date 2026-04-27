@@ -222,7 +222,9 @@ export function useArenaChat(arenaId: string) {
         const msg = await sendArenaMessage(arenaId, userId, content.trim())
         // Fire-and-forget: notify any @mentioned arena members
         if (username) {
-          notifyMentions(arenaId, msg.id, content.trim(), username, userId).catch(() => {})
+          notifyMentions(arenaId, msg.id, content.trim(), username, userId).catch((e) => {
+            console.error('notifyMentions failed:', e)
+          })
         }
       } catch (e) {
         console.error('Send message error', e)
