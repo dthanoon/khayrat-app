@@ -55,7 +55,7 @@ function ToastOverlay() {
 }
 
 function AuthGate({ children }: { children: React.ReactNode }) {
-  const { session, setSession, setProfile, setAuthLoading, isAuthLoading } = useStore()
+  const { session, setSession, setProfile, setAuthLoading, isAuthLoading, profileLoaded, setProfileLoaded } = useStore()
   const segments = useSegments()
   const router = useRouter()
   const splashOpacity = useRef(new Animated.Value(1)).current
@@ -96,9 +96,12 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         clearTimeout(timeoutId)
         setSession(session)
         if (session?.user.id) {
-          // Load profile in background — don't block splash dismissal
-          getProfile(session.user.id).then(setProfile).catch(() => {})
+          getProfile(session.user.id)
+            .then(p => { setProfile(p); setProfileLoaded(true) })
+            .catch(() => { setProfileLoaded(true) })
           registerForPushNotifications(session.user.id).catch(() => {})
+        } else {
+          setProfileLoaded(true)
         }
         dismissSplash()
       })
@@ -112,6 +115,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       if (session?.user.id) {
         const profile = await getProfile(session.user.id).catch(() => null)
         setProfile(profile)
+        setProfileLoaded(true)
         if (event === 'SIGNED_IN') {
           registerForPushNotifications(session.user.id).catch(() => {})
         }
@@ -120,6 +124,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         }
       } else {
         setProfile(null)
+        setProfileLoaded(false)
       }
     })
 
@@ -130,13 +135,19 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   }, [])
 
   useEffect(() => {
+    if (!profileLoaded) return
     const inAuthGroup = segments[0] === '(auth)'
     if (session === null && !inAuthGroup) {
       router.replace('/(auth)/login')
     } else if (session !== null && inAuthGroup) {
-      router.replace('/(tabs)')
+      // Send to onboarding if profile not yet set up, otherwise straight to tabs
+      if (profile?.username) {
+        router.replace('/(tabs)')
+      } else {
+        router.replace('/onboarding')
+      }
     }
-  }, [session, segments])
+  }, [session, segments, profile, profileLoaded])
 
   return (
     <>
@@ -168,6 +179,7 @@ export default function RootLayout() {
         }}
       >
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen
           name="arena/[id]"

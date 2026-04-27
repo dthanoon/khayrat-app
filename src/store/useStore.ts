@@ -7,11 +7,13 @@ interface AppState {
   session: Session | null
   profile: Profile | null
   isAuthLoading: boolean
+  profileLoaded: boolean
 
   // Actions
   setSession: (session: Session | null) => void
   setProfile: (profile: Profile | null) => void
   setAuthLoading: (loading: boolean) => void
+  setProfileLoaded: (loaded: boolean) => void
   signOut: () => void
 
   // Toast
@@ -24,12 +26,14 @@ export const useStore = create<AppState>((set) => ({
   session: null,
   profile: null,
   isAuthLoading: true,
+  profileLoaded: false,
 
   setSession: (session) => set({ session }),
   setProfile: (profile) => set({ profile }),
   setAuthLoading: (isAuthLoading) => set({ isAuthLoading }),
+  setProfileLoaded: (profileLoaded) => set({ profileLoaded }),
 
-  signOut: () => set({ session: null, profile: null }),
+  signOut: () => set({ session: null, profile: null, profileLoaded: false }),
 
   toast: null,
   showToast: (message, type = 'info') => {
