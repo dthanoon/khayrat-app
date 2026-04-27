@@ -312,6 +312,17 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </Card>
 
+        {/* Sign out */}
+        <Card style={styles.section}>
+          <Button
+            title="Sign Out"
+            onPress={signOut}
+            variant="secondary"
+            fullWidth
+            style={styles.signOutBtn}
+          />
+        </Card>
+
         {/* Danger zone */}
         <Card style={styles.section}>
           <Text style={[styles.sectionTitle, styles.dangerTitle]}>Account</Text>
@@ -408,6 +419,9 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.textMuted,
     lineHeight: 20,
+  },
+  signOutBtn: {
+    borderColor: colors.border,
   },
   deleteBtn: {
     borderColor: '#ef4444',
