@@ -55,7 +55,7 @@ function ToastOverlay() {
 }
 
 function AuthGate({ children }: { children: React.ReactNode }) {
-  const { session, setSession, setProfile, setAuthLoading, isAuthLoading, profileLoaded, setProfileLoaded } = useStore()
+  const { session, profile, setSession, setProfile, setAuthLoading, isAuthLoading, profileLoaded, setProfileLoaded } = useStore()
   const segments = useSegments()
   const router = useRouter()
   const splashOpacity = useRef(new Animated.Value(1)).current
