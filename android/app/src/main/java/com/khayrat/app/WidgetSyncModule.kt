@@ -21,10 +21,11 @@ class WidgetSyncModule(private val reactContext: ReactApplicationContext) :
             putString("access_token",     data.getString("accessToken") ?: "")
             putString("supabase_url",     data.getString("supabaseUrl") ?: "")
             putString("supabase_anon_key",data.getString("supabaseAnonKey") ?: "")
-            putBoolean("quran_reading",   data.getBoolean("quranReading"))
-            putBoolean("fasting",         data.getBoolean("fasting"))
-            putBoolean("qiyam",           data.getBoolean("qiyam"))
-            putString("log_date",         data.getString("date") ?: "")
+            putBoolean("quran_reading",  data.getBoolean("quranReading"))
+            putBoolean("fasting",        data.getBoolean("fasting"))
+            putBoolean("qiyam",          data.getBoolean("qiyam"))
+            putBoolean("kahf_reading",   data.getBoolean("kahfReading"))
+            putString("log_date",        data.getString("date") ?: "")
         }.apply()
 
         // Refresh all widgets immediately
