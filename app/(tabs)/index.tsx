@@ -46,9 +46,13 @@ export default function DashboardScreen() {
       <View style={styles.greeting}>
         <View>
           <Text style={styles.greetingText}>{greeting()},</Text>
-          <Text style={styles.username}>
-            {profile?.first_name ?? profile?.username ?? 'Friend'} 👋
-          </Text>
+          {profile ? (
+            <Text style={styles.username}>
+              {profile.first_name ?? profile.username} 👋
+            </Text>
+          ) : (
+            <Text style={[styles.username, styles.usernamePlaceholder]}> </Text>
+          )}
         </View>
         <TouchableOpacity
           onPress={() => router.push('/settings')}
@@ -130,6 +134,9 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xxl,
     fontWeight: fontWeight.bold,
     color: colors.textPrimary,
+  },
+  usernamePlaceholder: {
+    opacity: 0,
   },
   settingsBtn: {
     padding: spacing.sm,

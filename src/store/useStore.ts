@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { Session } from '@supabase/supabase-js'
 import type { Profile } from '../types'
+import { setCachedProfile, clearCachedProfile } from '../services/profiles'
 
 interface AppState {
   // Auth
@@ -29,11 +30,21 @@ export const useStore = create<AppState>((set) => ({
   profileLoaded: false,
 
   setSession: (session) => set({ session }),
-  setProfile: (profile) => set({ profile }),
+  setProfile: (profile) => {
+    set({ profile })
+    if (profile) {
+      setCachedProfile(profile).catch(() => {})
+    } else {
+      clearCachedProfile().catch(() => {})
+    }
+  },
   setAuthLoading: (isAuthLoading) => set({ isAuthLoading }),
   setProfileLoaded: (profileLoaded) => set({ profileLoaded }),
 
-  signOut: () => set({ session: null, profile: null, profileLoaded: false }),
+  signOut: () => {
+    set({ session: null, profile: null, profileLoaded: true })
+    clearCachedProfile().catch(() => {})
+  },
 
   toast: null,
   showToast: (message, type = 'info') => {

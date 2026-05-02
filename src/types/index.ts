@@ -52,6 +52,7 @@ export type LeaderboardSort =
   | 'reading_consistency_pct'
   | 'fasting_consistency_pct'
   | 'qiyam_consistency_pct'
+  | 'points_per_day'
 
 export interface LeaderboardEntry {
   user_id: string
@@ -64,6 +65,7 @@ export interface LeaderboardEntry {
   reading_consistency_pct: number
   fasting_consistency_pct: number
   qiyam_consistency_pct: number
+  points_per_day?: number
   rank?: number
 }
 

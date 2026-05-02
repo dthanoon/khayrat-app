@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { supabase } from '../services/supabase'
 import { useStore } from '../store/useStore'
+import type { Profile } from '../types'
 
 export function useAuth() {
   const { session, profile, isAuthLoading, setProfile, showToast } = useStore()
@@ -23,7 +24,7 @@ export function useAuth() {
   }, [])
 
   const updateProfile = useCallback(
-    async (updates: Partial<typeof profile>) => {
+    async (updates: Partial<Profile>) => {
       if (!session?.user.id) return
       const { data, error } = await supabase
         .from('profiles')

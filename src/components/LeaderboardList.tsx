@@ -20,13 +20,14 @@ function LeaderboardRow({ entry, currentUserId, sortKey }: RowProps) {
 
   let displayValue: string
   if (sortKey === 'total_points') displayValue = String(entry.total_points)
+  else if (sortKey === 'points_per_day') displayValue = (entry.points_per_day ?? 0).toFixed(1)
   else if (sortKey === 'reading_consistency_pct') displayValue = formatPct(entry.reading_consistency_pct)
   else if (sortKey === 'fasting_consistency_pct') displayValue = formatPct(entry.fasting_consistency_pct)
   else if (sortKey === 'qiyam_consistency_pct') displayValue = formatPct(entry.qiyam_consistency_pct)
   else displayValue = formatPct(entry.consistency_pct)
 
   const valueColor =
-    sortKey === 'total_points'
+    sortKey === 'total_points' || sortKey === 'points_per_day'
       ? colors.amber
       : consistencyColor(
           sortKey === 'reading_consistency_pct'

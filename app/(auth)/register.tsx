@@ -43,7 +43,7 @@ export default function RegisterScreen() {
       if (sessionReady) {
         // Signed in — route guard will detect no profile and send to /onboarding
         // Navigate explicitly so it's instant with no flicker
-        router.replace('/onboarding')
+        router.replace('/onboarding' as any)
       } else {
         showToast('Account created! Check your email to confirm, then sign in.', 'success')
         router.replace('/(auth)/login')

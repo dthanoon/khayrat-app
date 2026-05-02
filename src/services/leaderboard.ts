@@ -4,6 +4,9 @@ import type { LeaderboardEntry, LeaderboardSort, LeaderboardFilters, UserStats, 
 /**
  * Fetch paginated leaderboard from user_stats view.
  * The view already contains username, country, gender — no separate profile join needed.
+ *
+ * Sorting by 'points_per_day' goes through a dedicated RPC because the column is
+ * computed (total_points / active_days) and isn't part of the view.
  */
 export async function getLeaderboard(
   sort: LeaderboardSort = 'consistency_pct',
@@ -11,6 +14,10 @@ export async function getLeaderboard(
   limit = 50,
   offset = 0
 ): Promise<LeaderboardEntry[]> {
+  if (sort === 'points_per_day') {
+    return getLeaderboardByPointsPerDay(filters, limit, offset)
+  }
+
   let query = supabase
     .from('user_stats')
     .select('id, username, country, gender, total_points, active_days, consistency_pct, reading_consistency_pct, fasting_consistency_pct, qiyam_consistency_pct')
@@ -35,6 +42,51 @@ export async function getLeaderboard(
     reading_consistency_pct: row.reading_consistency_pct,
     fasting_consistency_pct: row.fasting_consistency_pct,
     qiyam_consistency_pct: row.qiyam_consistency_pct,
+    rank: offset + i + 1,
+  }))
+}
+
+type PointsPerDayRow = {
+  id: string
+  username: string
+  country: string | null
+  gender: string | null
+  total_points: number
+  active_days: number
+  consistency_pct: number
+  reading_consistency_pct: number
+  fasting_consistency_pct: number
+  qiyam_consistency_pct: number
+  points_per_day: number
+}
+
+async function getLeaderboardByPointsPerDay(
+  filters: LeaderboardFilters,
+  limit: number,
+  offset: number
+): Promise<LeaderboardEntry[]> {
+  const { data, error } = await supabase.rpc('get_leaderboard_by_points_per_day', {
+    p_gender: filters.gender ?? null,
+    p_country: filters.country ?? null,
+    p_limit: limit,
+    p_offset: offset,
+  })
+
+  if (error) throw error
+  if (!data) return []
+
+  return (data as PointsPerDayRow[]).map((row, i) => ({
+    user_id: row.id,
+    username: row.username,
+    country: row.country,
+    gender: row.gender,
+    total_points: row.total_points,
+    active_days: row.active_days,
+    consistency_pct: row.consistency_pct,
+    reading_consistency_pct: row.reading_consistency_pct,
+    fasting_consistency_pct: row.fasting_consistency_pct,
+    qiyam_consistency_pct: row.qiyam_consistency_pct,
+    points_per_day: row.points_per_day,
     rank: offset + i + 1,
   }))
 }
