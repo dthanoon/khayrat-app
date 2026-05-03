@@ -11,6 +11,7 @@ struct WidgetLogData {
     var kahfReading:     Bool
     var date:            String
     var accessToken:     String
+    var refreshToken:    String
     var supabaseUrl:     String
     var supabaseAnonKey: String
     var userId:          String
@@ -24,6 +25,7 @@ struct WidgetLogData {
             kahfReading:     d?.bool(forKey: "kahf_reading")        ?? false,
             date:            d?.string(forKey: "log_date")          ?? "",
             accessToken:     d?.string(forKey: "access_token")      ?? "",
+            refreshToken:    d?.string(forKey: "refresh_token")     ?? "",
             supabaseUrl:     d?.string(forKey: "supabase_url")      ?? "",
             supabaseAnonKey: d?.string(forKey: "supabase_anon_key") ?? "",
             userId:          d?.string(forKey: "user_id")           ?? ""
@@ -33,6 +35,13 @@ struct WidgetLogData {
     static func save(field: String, value: Bool) {
         let d = UserDefaults(suiteName: appGroup)
         d?.set(value, forKey: field)
+        d?.synchronize()
+    }
+
+    static func saveTokens(accessToken: String, refreshToken: String) {
+        let d = UserDefaults(suiteName: appGroup)
+        d?.set(accessToken,  forKey: "access_token")
+        d?.set(refreshToken, forKey: "refresh_token")
         d?.synchronize()
     }
 
@@ -102,13 +111,38 @@ struct LogProvider: TimelineProvider {
     }
 }
 
-// Always writes today's actual date — never relies on the cached date in UserDefaults,
-// which prevents a stale rollover bug from writing into yesterday's DB row.
-func upsertLog(_ data: WidgetLogData) {
-    guard data.isAuthenticated,
-          let url = URL(string: "\(data.supabaseUrl)/rest/v1/daily_logs?on_conflict=user_id,log_date")
-    else { return }
+private struct TokenResponse: Decodable {
+    let access_token:  String
+    let refresh_token: String
+}
 
+// Calls Supabase token endpoint to rotate the access + refresh token pair.
+// Saves the new tokens to shared UserDefaults so the next widget reload picks them up.
+func refreshTokens(_ data: WidgetLogData) async -> WidgetLogData? {
+    guard !data.refreshToken.isEmpty,
+          let url = URL(string: "\(data.supabaseUrl)/auth/v1/token?grant_type=refresh_token")
+    else { return nil }
+
+    var req = URLRequest(url: url)
+    req.httpMethod = "POST"
+    req.setValue(data.supabaseAnonKey, forHTTPHeaderField: "apikey")
+    req.setValue("application/json",   forHTTPHeaderField: "Content-Type")
+    req.httpBody = try? JSONSerialization.data(withJSONObject: ["refresh_token": data.refreshToken])
+
+    guard let (body, response) = try? await URLSession.shared.data(for: req),
+          (response as? HTTPURLResponse)?.statusCode == 200,
+          let tokens = try? JSONDecoder().decode(TokenResponse.self, from: body)
+    else { return nil }
+
+    WidgetLogData.saveTokens(accessToken: tokens.access_token, refreshToken: tokens.refresh_token)
+
+    var updated = data
+    updated.accessToken  = tokens.access_token
+    updated.refreshToken = tokens.refresh_token
+    return updated
+}
+
+func buildUpsertRequest(url: URL, data: WidgetLogData) -> URLRequest {
     let body: [String: Any] = [
         "user_id":       data.userId,
         "log_date":      isoToday(),
@@ -117,7 +151,6 @@ func upsertLog(_ data: WidgetLogData) {
         "qiyam":         data.qiyam,
         "kahf_reading":  data.kahfReading,
     ]
-
     var req = URLRequest(url: url)
     req.httpMethod = "POST"
     req.setValue(data.supabaseAnonKey,          forHTTPHeaderField: "apikey")
@@ -125,7 +158,27 @@ func upsertLog(_ data: WidgetLogData) {
     req.setValue("application/json",            forHTTPHeaderField: "Content-Type")
     req.setValue("resolution=merge-duplicates", forHTTPHeaderField: "Prefer")
     req.httpBody = try? JSONSerialization.data(withJSONObject: body)
-    URLSession.shared.dataTask(with: req).resume()
+    return req
+}
+
+// Always writes today's actual date. Awaited inside perform() so the App Intents
+// framework keeps the process alive until the network call completes.
+// On 401, rotates the token pair and retries once — covers the case where the user
+// hasn't opened the app in days and the access token has expired.
+func upsertLog(_ data: WidgetLogData) async {
+    guard data.isAuthenticated,
+          let url = URL(string: "\(data.supabaseUrl)/rest/v1/daily_logs?on_conflict=user_id,log_date")
+    else { return }
+
+    guard let (_, response) = try? await URLSession.shared.data(for: buildUpsertRequest(url: url, data: data)) else { return }
+    let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+
+    // 2xx = success, non-401 error = nothing we can fix here
+    guard status == 401 else { return }
+
+    // Access token expired — refresh and retry once
+    guard let refreshed = await refreshTokens(data) else { return }
+    _ = try? await URLSession.shared.data(for: buildUpsertRequest(url: url, data: refreshed))
 }
 
 func isoToday() -> String {
@@ -146,7 +199,7 @@ struct ToggleQuranIntent: AppIntent {
         var data = WidgetLogData.load()
         data.quranReading.toggle()
         WidgetLogData.save(field: "quran_reading", value: data.quranReading)
-        upsertLog(data)
+        await upsertLog(data)
         return .result()
     }
 }
@@ -158,7 +211,7 @@ struct ToggleFastingIntent: AppIntent {
         var data = WidgetLogData.load()
         data.fasting.toggle()
         WidgetLogData.save(field: "fasting", value: data.fasting)
-        upsertLog(data)
+        await upsertLog(data)
         return .result()
     }
 }
@@ -170,7 +223,7 @@ struct ToggleQiyamIntent: AppIntent {
         var data = WidgetLogData.load()
         data.qiyam.toggle()
         WidgetLogData.save(field: "qiyam", value: data.qiyam)
-        upsertLog(data)
+        await upsertLog(data)
         return .result()
     }
 }
@@ -182,7 +235,7 @@ struct ToggleKahfIntent: AppIntent {
         var data = WidgetLogData.load()
         data.kahfReading.toggle()
         WidgetLogData.save(field: "kahf_reading", value: data.kahfReading)
-        upsertLog(data)
+        await upsertLog(data)
         return .result()
     }
 }

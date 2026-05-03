@@ -3,6 +3,7 @@ import { NativeModules, Platform } from 'react-native'
 export interface WidgetSyncData {
   userId: string
   accessToken: string
+  refreshToken: string
   supabaseUrl: string
   supabaseAnonKey: string
   quranReading: boolean
@@ -24,11 +25,12 @@ export function syncWidgetData(data: WidgetSyncData): void {
   }
 }
 
-/** Refresh only the auth token in widget storage — called on TOKEN_REFRESHED so the widget
- *  always has a valid token without overwriting the log values it stored itself. */
+/** Refresh only the auth tokens in widget storage — called on TOKEN_REFRESHED so the widget
+ *  always has valid tokens without overwriting the log values it stored itself. */
 export function syncWidgetAuthToken(
   userId: string,
   accessToken: string,
+  refreshToken: string,
 ): void {
   if (Platform.OS !== 'ios') return
   try {
@@ -37,6 +39,7 @@ export function syncWidgetAuthToken(
       mod.syncAuthToken(
         userId,
         accessToken,
+        refreshToken,
         process.env.EXPO_PUBLIC_SUPABASE_URL ?? '',
         process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
       )

@@ -17,6 +17,7 @@ export function useDailyLog(date?: string) {
     syncWidgetData({
       userId,
       accessToken: session.access_token,
+      refreshToken: session.refresh_token ?? '',
       supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL ?? '',
       supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
       quranReading: log.quran_reading,
@@ -25,7 +26,7 @@ export function useDailyLog(date?: string) {
       kahfReading: log.kahf_reading,
       date: log.log_date,
     })
-  }, [userId, session?.access_token])
+  }, [userId, session?.access_token, session?.refresh_token])
 
   const [log, setLog] = useState<DailyLog | null>(null)
   const [loading, setLoading] = useState(true)

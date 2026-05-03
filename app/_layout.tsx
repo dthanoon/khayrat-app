@@ -146,7 +146,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         // block first paint and should not race with the splash fade animation.
         setTimeout(() => {
           registerForPushNotifications(userId).catch(() => {})
-          syncWidgetAuthToken(userId, session.access_token)
+          syncWidgetAuthToken(userId, session.access_token, session.refresh_token)
         }, 1000)
       } catch {
         setProfileLoaded(true)
@@ -187,12 +187,12 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         if (event === 'SIGNED_IN') {
           setTimeout(() => {
             registerForPushNotifications(userId).catch(() => {})
-            syncWidgetAuthToken(userId, session.access_token)
+            syncWidgetAuthToken(userId, session.access_token, session.refresh_token)
           }, 1000)
         }
       } else if (event === 'TOKEN_REFRESHED') {
-        // Just keep the widget's token fresh — no profile refetch needed.
-        syncWidgetAuthToken(userId, session.access_token)
+        // Just keep the widget's tokens fresh — no profile refetch needed.
+        syncWidgetAuthToken(userId, session.access_token, session.refresh_token)
       }
     })
 
