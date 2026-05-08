@@ -95,20 +95,41 @@ function MessageBubble({ message, isMe, onLongPress, currentUserId }: MessageBub
 interface Props {
   arenaId: string
   currentUserId: string
+  members?: { username: string }[]
 }
 
-export function ArenaChat({ arenaId, currentUserId }: Props) {
+export function ArenaChat({ arenaId, currentUserId, members = [] }: Props) {
   const { messages, loading, sending, send, react } = useArenaChat(arenaId)
   const [content, setContent] = useState('')
   const [reactionTarget, setReactionTarget] = useState<ArenaMessage | null>(null)
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null)
   const flatListRef = useRef<FlatList>(null)
 
   const hasText = content.trim().length > 0
+
+  const mentionSuggestions = mentionQuery !== null
+    ? members
+        .filter(m => m.username.toLowerCase().startsWith(mentionQuery.toLowerCase()))
+        .slice(0, 5)
+    : []
+
+  const handleChangeText = (text: string) => {
+    setContent(text)
+    const match = text.match(/@(\w*)$/)
+    setMentionQuery(match ? match[1] : null)
+  }
+
+  const insertMention = (username: string) => {
+    const newText = content.replace(/@(\w*)$/, `@${username} `)
+    setContent(newText)
+    setMentionQuery(null)
+  }
 
   const handleSend = async () => {
     if (!hasText) return
     const text = content.trim()
     setContent('')
+    setMentionQuery(null)
     await send(text)
     setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 80)
   }
@@ -147,12 +168,33 @@ export function ArenaChat({ arenaId, currentUserId }: Props) {
         }
       />
 
+      {/* @mention suggestions */}
+      {mentionSuggestions.length > 0 && (
+        <View style={styles.mentionList}>
+          {mentionSuggestions.map(member => (
+            <TouchableOpacity
+              key={member.username}
+              style={styles.mentionItem}
+              onPress={() => insertMention(member.username)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.mentionAvatar}>
+                <Text style={styles.mentionAvatarText}>
+                  {member.username[0].toUpperCase()}
+                </Text>
+              </View>
+              <Text style={styles.mentionUsername}>@{member.username}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
       {/* Input bar */}
       <View style={styles.inputBar}>
         <TextInput
           style={styles.input}
           value={content}
-          onChangeText={setContent}
+          onChangeText={handleChangeText}
           placeholder="Type a message…"
           placeholderTextColor={colors.textMuted}
           selectionColor={colors.emerald}
@@ -310,6 +352,42 @@ const styles = StyleSheet.create({
   reactionPillText: {
     fontSize: 12,
     color: colors.textSecondary,
+  },
+
+  // @mention suggestions
+  mentionList: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: colors.bgCard,
+  },
+  mentionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: `${colors.border}60`,
+  },
+  mentionAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.emeraldDim,
+    borderWidth: 1,
+    borderColor: `${colors.emerald}50`,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mentionAvatarText: {
+    fontSize: 12,
+    fontWeight: fontWeight.bold,
+    color: colors.emeraldLight,
+  },
+  mentionUsername: {
+    fontSize: fontSize.md,
+    color: colors.textPrimary,
+    fontWeight: fontWeight.medium,
   },
 
   // Input bar

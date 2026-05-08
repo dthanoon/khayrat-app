@@ -262,7 +262,7 @@ export default function ArenaDetailScreen() {
 
         {activeTab === 'chat' && (
           userId
-            ? <ArenaChat arenaId={id} currentUserId={userId} />
+            ? <ArenaChat arenaId={id} currentUserId={userId} members={memberStats} />
             : <View style={styles.emptyState}>
                 <Ionicons name="lock-closed-outline" size={40} color={colors.textMuted} />
                 <Text style={styles.emptyStateText}>Sign in to join the chat</Text>
