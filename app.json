@@ -2,7 +2,7 @@
   "expo": {
     "name": "Khayrat",
     "slug": "khayrat-app",
-    "version": "1.0.7",
+    "version": "1.0.9",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "khayrat",
@@ -33,7 +33,7 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#0a0a0a"
       },
-      "package": "com.khayrat.app"
+      "package": "com.khayratleague.app"
     },
     "web": {
       "bundler": "metro",

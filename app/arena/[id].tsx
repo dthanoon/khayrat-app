@@ -9,8 +9,11 @@ import {
   Modal,
   Pressable,
   TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native'
 import { useLocalSearchParams, useNavigation } from 'expo-router'
+import { useHeaderHeight } from '@react-navigation/elements'
 import { useLayoutEffect } from 'react'
 import { Ionicons } from '@expo/vector-icons'
 import { ArenaChat } from '../../src/components/ArenaChat'
@@ -31,6 +34,7 @@ type Tab = 'standings' | 'members' | 'chat'
 export default function ArenaDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const navigation = useNavigation()
+  const headerHeight = useHeaderHeight()
   const { userId } = useAuth()
   const { join, leave } = useArenas()
   const { arena, standings, memberStats, groupLeaderboard, loading, reload } = useArenaDetail(id)
@@ -78,7 +82,11 @@ export default function ArenaDetailScreen() {
   ]
 
   return (
-    <View style={styles.screen}>
+    <KeyboardAvoidingView
+      style={styles.screen}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={headerHeight}
+    >
       {/* ── Compact arena header ── */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
@@ -261,7 +269,7 @@ export default function ArenaDetailScreen() {
               </View>
         )}
       </View>
-    </View>
+    </KeyboardAvoidingView>
   )
 }
 

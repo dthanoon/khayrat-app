@@ -51,7 +51,6 @@ export default function UserProfileScreen() {
     )
   }
 
-  const displayName = [profile.first_name, profile.last_name].filter(Boolean).join(' ')
   const cColor = stats ? consistencyColor(stats.stats.consistency_pct) : colors.textMuted
 
   return (
@@ -63,14 +62,7 @@ export default function UserProfileScreen() {
             <Text style={styles.avatarText}>{profile.username[0]?.toUpperCase()}</Text>
           </View>
           <View style={styles.nameBlock}>
-            {displayName ? (
-              <>
-                <Text style={styles.displayName}>{displayName}</Text>
-                <Text style={styles.username}>@{profile.username}</Text>
-              </>
-            ) : (
-              <Text style={styles.displayName}>@{profile.username}</Text>
-            )}
+            <Text style={styles.displayName}>@{profile.username}</Text>
           </View>
         </View>
 

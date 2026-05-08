@@ -111,11 +111,11 @@ android {
 
     namespace 'com.khayrat.app'
     defaultConfig {
-        applicationId 'com.khayrat.app'
+        applicationId 'com.khayratleague.app'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0.0"
+        versionCode 3
+        versionName "1.0.9"
     }
     signingConfigs {
         debug {

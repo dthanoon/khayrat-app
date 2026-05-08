@@ -6,7 +6,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  KeyboardAvoidingView,
   Platform,
   Modal,
   Pressable,
@@ -123,11 +122,7 @@ export function ArenaChat({ arenaId, currentUserId }: Props) {
   if (loading) return <LoadingSpinner message="Loading chat…" />
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-    >
+    <View style={styles.container}>
       <FlatList
         ref={flatListRef}
         data={messages}
@@ -205,7 +200,7 @@ export function ArenaChat({ arenaId, currentUserId }: Props) {
           </View>
         </Pressable>
       </Modal>
-    </KeyboardAvoidingView>
+    </View>
   )
 }
 
